@@ -1,6 +1,6 @@
 /***************************************************
-* config.h: Build-time configuration               *
-* Copyright (C)                                    *
+* config.h: Build-time configuration & portability *
+* Copyright (C) 2021 Zach Caldwell                 *
 ****************************************************
 * This Source Code Form is subject to the terms of *
 * the Mozilla Public License, v. 2.0. If a copy of *
@@ -8,42 +8,43 @@
 * can obtain one at http://mozilla.org/MPL/2.0/.   *
 ***************************************************/
 
-#ifndef _CONFIG_H_
-#define _CONFIG_H_
+#ifndef RENITY_CONFIG_H_
+#define RENITY_CONFIG_H_
 
-#mesondefine BUILD_SHARED
-#mesondefine OPT_USE_EXCEPTIONS
-#mesondefine OPT_USE_RTTI
+// Compile-time definitions provided by the build system
+#mesondefine RENITY_BUILD_SHARED
+#mesondefine RENITY_USE_EXCEPTIONS
+#mesondefine RENITY_USE_RTTI
+#mesondefine RENITY_USE_STL
 
-#ifdef BUILD_SHARED
-  // From https://gcc.gnu.org/wiki/Visibility
-  #if defined _WIN32 || defined __CYGWIN__
-    #ifdef BUILDING_LIBRARY
-      #ifdef __GNUC__
-        #define DLL_PUBLIC __attribute__ ((dllexport))
-      #else
-        #define DLL_PUBLIC __declspec(dllexport)
-      #endif //__GNUC__
+#ifdef RENITY_BUILD_SHARED
+    // From https://gcc.gnu.org/wiki/Visibility
+    #if defined _WIN32 || defined __CYGWIN__
+        #define RENITY_LOCAL 
+        #ifdef BUILDING_RENITY
+            #ifdef __GNUC__
+                #define RENITY_API __attribute__ ((dllexport))
+            #else
+                #define RENITY_API __declspec(dllexport)
+            #endif // __GNUC__
+        #else
+            #ifdef __GNUC__
+                #define RENITY_API __attribute__ ((dllimport))
+            #else
+                #define RENITY_API __declspec(dllimport)
+            #endif // __GNUC__
+        #endif // BUILDING_RENITY
     #else
-      #ifdef __GNUC__
-        #define DLL_PUBLIC __attribute__ ((dllimport))
-      #else
-        #define DLL_PUBLIC __declspec(dllimport)
-      #endif //__GNUC__
-    #endif //BUILDING_ENGINE
-    #define DLL_LOCAL
-  #else
-    #if __GNUC__ >= 4
-      #define DLL_PUBLIC __attribute__ ((visibility ("default")))
-      #define DLL_LOCAL  __attribute__ ((visibility ("hidden")))
-    #else
-      #define DLL_PUBLIC
-      #define DLL_LOCAL
-    #endif
-  #endif
+        #if __GNUC__ >= 4
+            #define RENITY_API __attribute__ ((visibility ("default")))
+            #define RENITY_LOCAL  __attribute__ ((visibility ("hidden")))
+        #else
+            #define RENITY_API 
+            #define RENITY_LOCAL 
+        #endif
+    #endif // defined _WIN32 || defined __CYGWIN__
 #else
-  #define DLL_PUBLIC
-  #define DLL_LOCAL
-#endif //BUILD_SHARED
-
-#endif //_CONFIG_H_
+    #define RENITY_API
+    #define RENITY_LOCAL
+#endif // RENITY_BUILD_SHARED
+#endif // RENITY_CONFIG_H_

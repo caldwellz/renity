@@ -2,6 +2,7 @@
 build
 .build
 _build
+builddir
 
 # Prerequisites
 *.d

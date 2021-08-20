@@ -3,25 +3,33 @@ cppcomp = meson.get_compiler('cpp')
 
 
 # Find dependencies
-# Example of a required library with a subproject fallback
-libfoo_dep = dependency('libfoo', required : false)
-if not libfoo_dep.found()
-    libfoo_dep = cppcomp.find_library('foo', has_headers : ['foo.h'], required : false)
-    if not libfoo_dep.found()
-        libfoo_proj = subproject('foo')
-        libfoo_dep = libfoo_proj.get_variable('libfoo_dep')
-    endif
+# - SDL2
+dep_sdl = dependency('sdl2', required : false)
+if not dep_sdl.found()
+    dep_sdl = cppcomp.find_library('SDL2', has_headers : ['SDL2/SDL.h'])
 endif
 
+# - SDL2_image
+dep_sdlimage = dependency('SDL2_image', required : false)
+if not dep_sdlimage.found()
+    dep_sdlimage = cppcomp.find_library('SDL2_image', has_headers : ['SDL_image.h'])
+endif
 
-# List sources and dependencies - version file comes later
+# - PhysFS
+dep_physfs = dependency('physfs', required : false)
+if not dep_physfs.found()
+    dep_physfs = cppcomp.find_library('physfs', has_headers : ['physfs.h'])
+endif
+lib_deps = [dep_sdl, dep_sdlimage, dep_physfs]
+
+
+# List sources - version file comes later
 lib_srcs = files([])
-lib_deps = [libfoo_dep]
 
 
 # These arguments are only used to build the library
 # and not the executables that use the library.
-lib_args = ['-DBUILDING_LIBRARY']
+lib_args = ['-DBUILDING_RENITY']
 
 
 # Configure version info

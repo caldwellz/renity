@@ -1,6 +1,6 @@
 /***************************************************
 * version.h: Project version / revision            *
-* Copyright (C)                                    *
+* Copyright (C) 2021 Zach Caldwell                 *
 ****************************************************
 * This Source Code Form is subject to the terms of *
 * the Mozilla Public License, v. 2.0. If a copy of *
@@ -8,22 +8,24 @@
 * can obtain one at http://mozilla.org/MPL/2.0/.   *
 ***************************************************/
 
-#ifndef _VERSION_H_
-#define _VERSION_H_
+#ifndef RENITY_VERSION_H_
+#define RENITY_VERSION_H_
 
 #include <config.h>
 
 #ifdef __cplusplus
+namespace renity {
 extern "C" {
 #endif //__cplusplus
 
-extern DLL_PUBLIC const char* PROJECT_NAME;
-extern DLL_PUBLIC const char* PROJECT_VERSION;
-extern DLL_PUBLIC const char* PROJECT_REVISION;
-extern DLL_PUBLIC const char* PROJECT_COMPILER;
-extern DLL_PUBLIC const char* PROJECT_COMPILER_VERSION;
+extern RENITY_API const char* kProjectName;
+extern RENITY_API const char* kProjectVersion;
+extern RENITY_API const char* kProjectRevision;
+extern RENITY_API const char* kProjectCompiler;
+extern RENITY_API const char* kProjectCompilerVersion;
 
 #ifdef __cplusplus
 }
-#endif //__cplusplus
-#endif //_VERSION_H_
+}
+#endif // __cplusplus
+#endif // RENITY_VERSION_H_

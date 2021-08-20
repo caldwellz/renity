@@ -1,6 +1,6 @@
 /***************************************************
 * Test - Project version / revision                *
-* Copyright (C)                                    *
+* Copyright (C) 2021 Zach Caldwell                 *
 ****************************************************
 * This Source Code Form is subject to the terms of *
 * the Mozilla Public License, v. 2.0. If a copy of *
@@ -8,29 +8,29 @@
 * can obtain one at http://mozilla.org/MPL/2.0/.   *
 ***************************************************/
 
-#include <version.h>
+#include "version.h"
+
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
 
-int main(void)
-{
-    // Verify pointers not null
-    assert(PROJECT_NAME);
-    assert(PROJECT_VERSION);
-    assert(PROJECT_REVISION);
-    assert(PROJECT_COMPILER);
-    assert(PROJECT_COMPILER_VERSION);
+int main(void) {
+    // Verify pointers are not null
+    assert(kProjectName);
+    assert(kProjectVersion);
+    assert(kProjectRevision);
+    assert(kProjectCompiler);
+    assert(kProjectCompilerVersion);
 
-    // Verify contents not null
-    assert(strlen(PROJECT_NAME));
-    assert(strlen(PROJECT_VERSION));
-    assert(strlen(PROJECT_REVISION));
-    assert(strlen(PROJECT_COMPILER));
-    assert(strlen(PROJECT_COMPILER_VERSION));
+    // Verify contents are not empty
+    assert(strlen(kProjectName));
+    assert(strlen(kProjectVersion));
+    assert(strlen(kProjectRevision));
+    assert(strlen(kProjectCompiler));
+    assert(strlen(kProjectCompilerVersion));
 
     // Log the version strings
-    printf("%s %s-%s (%s-%s)", PROJECT_NAME, PROJECT_VERSION, PROJECT_REVISION, PROJECT_COMPILER, PROJECT_COMPILER_VERSION);
+    printf("%s %s-%s (%s-%s)\n", kProjectName, kProjectVersion, kProjectRevision, kProjectCompiler, kProjectCompilerVersion);
 
     return 0;
 }

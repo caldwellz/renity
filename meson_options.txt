@@ -1,1 +1,2 @@
-option('BUILD_TESTS', type : 'boolean', value : true)
+option('RENITY_BUILD_TESTS', type : 'boolean', value : true)
+option('RENITY_USE_STL', type : 'boolean', value : true)
