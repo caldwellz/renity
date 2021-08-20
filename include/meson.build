@@ -15,6 +15,8 @@ lib_headers = [
     conffile
   , 'types.h'
   , 'version.h'
+  , 'Dimension2D.h'
+  , 'Point2D.h'
 ]
 
 # Install headers - add others to lib_headers above

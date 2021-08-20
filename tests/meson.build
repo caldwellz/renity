@@ -1,6 +1,8 @@
 # Tests list
 tests = [
     ['version', '.c']
+  , ['Dimension2D', '.cc']
+  , ['Point2D', '.cc']
 ]
 
 
