@@ -23,3 +23,6 @@ lib_headers = [
 # Install headers - add others to lib_headers above
 base_include_subdir = meson.project_name()
 install_headers(lib_headers, subdir : meson.project_name())
+
+# Process subdirectories
+subdir('utils')

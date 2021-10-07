@@ -2,6 +2,11 @@
 cppcomp = meson.get_compiler('cpp')
 
 
+# These arguments are only used to build the library
+# and not the executables that use the library.
+lib_args = ['-DBUILDING_RENITY']
+
+
 # Find dependencies
 # - SDL2
 dep_sdl = dependency('sdl2', required : false)
@@ -23,15 +28,11 @@ endif
 lib_deps = [dep_sdl, dep_sdlimage, dep_physfs]
 
 
-# List sources - version file comes later
+# List sources and process subdirectories - version file comes later
 lib_srcs = files([
   'Window.cc'
 ])
-
-
-# These arguments are only used to build the library
-# and not the executables that use the library.
-lib_args = ['-DBUILDING_RENITY']
+subdir('utils')
 
 
 # Configure version info

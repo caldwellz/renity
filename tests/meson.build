@@ -1,6 +1,8 @@
 # Tests list
 tests = [
-    ['version', '.c']
+    ['surface_utils', '.c']
+  , ['texture_utils', '.c']
+  , ['version', '.c']
   , ['Dimension2D', '.cc']
   , ['Point2D', '.cc']
   , ['Window', '.cc']
