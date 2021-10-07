@@ -17,6 +17,7 @@ lib_headers = [
   , 'version.h'
   , 'Dimension2D.h'
   , 'Point2D.h'
+  , 'Window.h'
 ]
 
 # Install headers - add others to lib_headers above

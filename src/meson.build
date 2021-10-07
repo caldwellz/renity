@@ -24,7 +24,9 @@ lib_deps = [dep_sdl, dep_sdlimage, dep_physfs]
 
 
 # List sources - version file comes later
-lib_srcs = files([])
+lib_srcs = files([
+  'Window.cc'
+])
 
 
 # These arguments are only used to build the library
