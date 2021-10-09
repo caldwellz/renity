@@ -30,7 +30,8 @@ lib_deps = [dep_sdl, dep_sdlimage, dep_physfs]
 
 # List sources and process subdirectories - version file comes later
 lib_srcs = files([
-  'Window.cc'
+  'Texture.cc'
+, 'Window.cc'
 ])
 subdir('utils')
 

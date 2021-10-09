@@ -40,7 +40,7 @@ class Rect2D: public Dimension2D<T>, public Point2D<T> {
      * \todo Determine/perform more appropriate conversions.
      * \returns An SDL_Rect representing the current state of the rectangle.
      */
-    SDL_Rect toSDLRect() {
+    SDL_Rect toSDLRect() const {
         SDL_Rect rect;
         rect.x = (int) this->x();
         rect.y = (int) this->y();

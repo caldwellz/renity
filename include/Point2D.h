@@ -11,6 +11,7 @@
 #ifndef RENITY_POINT2D_H_
 #define RENITY_POINT2D_H_
 
+#include <SDL2/SDL_rect.h>
 #include "types.h"
 
 namespace renity {
@@ -63,6 +64,17 @@ class Point2D {
      */
     void y(const T &new_y) {
         y_ = new_y;
+    }
+
+    /** Utility function that returns the current Point as an SDL_Point.
+     * \todo Determine/perform more appropriate conversions.
+     * \returns An SDL_Point representing the current state of the Point.
+     */
+    SDL_Point toSDLPoint() const {
+        SDL_Point point;
+        point.x = (int) this->x();
+        point.y = (int) this->y();
+        return point;
     }
 
     // TODO: Mathematical operators here

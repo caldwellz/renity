@@ -133,6 +133,11 @@ RENITY_API bool Window::update() {
 }
 
 
+RENITY_API SDL_Renderer* Window::getRenderer() const {
+    return pimpl_->renderer;
+}
+
+
 RENITY_API String Window::title() const {
     if (pimpl_->window)
         pimpl_->title = SDL_GetWindowTitle(pimpl_->window);

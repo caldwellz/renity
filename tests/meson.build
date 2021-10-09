@@ -6,6 +6,7 @@ tests = [
   , ['Dimension2D', '.cc']
   , ['Point2D', '.cc']
   , ['Rect2D', '.cc']
+  , ['Texture', '.cc']
   , ['Window', '.cc']
 ]
 

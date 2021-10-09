@@ -11,6 +11,7 @@
 #ifndef RENITY_WINDOW_H_
 #define RENITY_WINDOW_H_
 
+#include <SDL2/SDL_render.h>
 #include "types.h"
 #include "Dimension2D.h"
 #include "Point2D.h"
@@ -59,6 +60,12 @@ class RENITY_API Window {
      * (either by code or by the user); false otherwise.
      */
     bool update();
+
+    /** Get the internal SDL_Renderer or the window.
+     * \returns An SDL_Renderer pointer if the window is open and there is a \
+     * valid renderer; NULL otherwise.
+     */
+    SDL_Renderer* getRenderer() const;
 
     /** Get the current title of the window.
      * Can be called at any time (before or after open() or close()).

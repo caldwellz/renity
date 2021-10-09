@@ -18,6 +18,7 @@ lib_headers = [
   , 'Dimension2D.h'
   , 'Point2D.h'
   , 'Rect2D.h'
+  , 'Texture.h'
   , 'Window.h'
 ]
 
