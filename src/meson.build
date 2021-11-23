@@ -25,8 +25,10 @@ dep_physfs = dependency('physfs', required : false)
 if not dep_physfs.found()
     dep_physfs = cppcomp.find_library('physfs', has_headers : ['physfs.h'])
 endif
-lib_deps = [dep_sdl, dep_sdlimage, dep_physfs]
 
+# - C math library (usually only needed on Linux)
+dep_m = cppcomp.find_library('m', required : false)
+lib_deps = [dep_sdl, dep_sdlimage, dep_physfs, dep_m]
 
 # List sources and process subdirectories - version file comes later
 lib_srcs = files([
