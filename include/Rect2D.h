@@ -36,6 +36,36 @@ class Rect2D: public Dimension2D<T>, public Point2D<T> {
     , Point2D<T>(x, y)
     {}
 
+    /** Get the position of the rectangle.
+     * \returns A Point2D containing the current X/Y position.
+     */
+    Point2D<T> position() const {
+      return Point2D<T>(this->x(), this->y());
+    }
+
+    /** Set the position of the rectangle.
+     * \param newPosition A Point2D containing the new X/Y position.
+     */
+    void position(const Point2D<T>& newPosition) {
+      this->x(newPosition.x());
+      this->y(newPosition.y());
+    }
+
+    /** Get the size (dimensions) of the rectangle.
+     * \returns A Dimension2D containing the current width and height.
+     */
+    Dimension2D<T> size() const {
+      return Dimension2D<T>(this->width(), this->height());
+    }
+
+    /** Set the size (dimensions) of the rectangle.
+     * \param newSize A Dimension2D containing the new width and height.
+     */
+    void size(const Dimension2D<T>& newSize) {
+      this->width(newSize.width());
+      this->height(newSize.height());
+    }
+
     /** Utility function that returns the current rectangle as an SDL_Rect.
      * \todo Determine/perform more appropriate conversions.
      * \returns An SDL_Rect representing the current state of the rectangle.
