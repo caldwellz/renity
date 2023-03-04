@@ -19,14 +19,14 @@
  *  You can get SDL at https://www.libsdl.org/
  *
  *  This file was written by Ryan C. Gordon. (icculus@icculus.org).
- *  Modifications made by Zach Caldwell to the includes and declspecs.
+ *  Code ported to SDL3 by Zach Caldwell, along with other local modifications.
  */
 
 #ifndef RENITY_UTILS_PHYSFSRWOPS_H_
 #define RENITY_UTILS_PHYSFSRWOPS_H_
 
+#include <SDL3/SDL.h>
 #include <physfs.h>
-#include <SDL2/SDL.h>
 
 #include "config.h"
 

@@ -7,9 +7,9 @@ conf_data.set('RENITY_BUILD_SHARED', get_option('default_library').contains('sha
 conf_data.set('RENITY_USE_EXCEPTIONS', not get_option('cpp_eh').contains('none'))
 conf_data.set('RENITY_USE_RTTI', get_option('cpp_rtti'))
 conf_data.set('RENITY_USE_STL', get_option('RENITY_USE_STL'))
-conffile = configure_file(configuration : conf_data,
-    input : 'config.h.in',
-    output : 'config.h')
+conffile = configure_file(configuration : conf_data
+  , input : 'config.h.in'
+  , output : 'config.h')
 
 lib_headers = [
     conffile

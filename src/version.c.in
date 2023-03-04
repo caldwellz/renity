@@ -1,0 +1,24 @@
+/***************************************************
+ * version.c: Project version / revision            *
+ * Copyright (C) 2023 Zach Caldwell                 *
+ ****************************************************
+ * This Source Code Form is subject to the terms of *
+ * the Mozilla Public License, v. 2.0. If a copy of *
+ * the MPL was not distributed with this file, You  *
+ * can obtain one at http://mozilla.org/MPL/2.0/.   *
+ ***************************************************/
+
+#include "version.h"
+
+const char* PUBLISHER_NAME = "@publisher@";
+const char* PRODUCT_NAME = "@name@";
+const char* PRODUCT_DESCRIPTION = "@description@";
+const char* PRODUCT_VERSION_STR = "@version@";
+const short PRODUCT_VERSION_MAJOR = @version_major@;
+const short PRODUCT_VERSION_MINOR = @version_minor@;
+const short PRODUCT_VERSION_PATCH = @version_patch@;
+const short PRODUCT_VERSION_BUILD = @revision_num@;
+const char* PRODUCT_REVISION = "@revision_commit@";
+const char* PRODUCT_BUILD_TYPE = "@build_type@";
+const char* PRODUCT_COMPILER = "@compiler@";
+const char* PRODUCT_COMPILER_VERSION = "@compiler_version@";

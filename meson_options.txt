@@ -1,2 +1,7 @@
+option('PUBLISHER_NAME', type : 'string', value : '', description : 'Publisher name')
+option('PRODUCT_DESCRIPTION', type : 'string', value : '', description : 'Product/application description')
+option('RENITY_BUILD_DOCS', type : 'boolean', value : true)
 option('RENITY_BUILD_TESTS', type : 'boolean', value : true)
+option('RENITY_BUILD_SERVER', type : 'boolean', value : true)
+option('RENITY_BUILD_CLIENT_DESKTOP', type : 'boolean', value : true)
 option('RENITY_USE_STL', type : 'boolean', value : true)

@@ -1,8 +1,10 @@
-# Common build directories
-build
-.build
-_build
-builddir
+# Build and generated documentation directories
+*build*
+docs/html
+
+# Meson subproject cache and build dirs
+subprojects/*
+!subprojects/*.wrap
 
 # Prerequisites
 *.d

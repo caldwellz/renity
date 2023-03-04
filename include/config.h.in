@@ -1,12 +1,12 @@
 /***************************************************
-* config.h: Build-time configuration & portability *
-* Copyright (C) 2021 Zach Caldwell                 *
-****************************************************
-* This Source Code Form is subject to the terms of *
-* the Mozilla Public License, v. 2.0. If a copy of *
-* the MPL was not distributed with this file, You  *
-* can obtain one at http://mozilla.org/MPL/2.0/.   *
-***************************************************/
+ * config.h: Build-time configuration & portability *
+ * Copyright (C) 2021 Zach Caldwell                 *
+ ****************************************************
+ * This Source Code Form is subject to the terms of *
+ * the Mozilla Public License, v. 2.0. If a copy of *
+ * the MPL was not distributed with this file, You  *
+ * can obtain one at http://mozilla.org/MPL/2.0/.   *
+ ***************************************************/
 
 #ifndef RENITY_CONFIG_H_
 #define RENITY_CONFIG_H_
@@ -18,33 +18,33 @@
 #mesondefine RENITY_USE_STL
 
 #ifdef RENITY_BUILD_SHARED
-    // From https://gcc.gnu.org/wiki/Visibility
-    #if defined _WIN32 || defined __CYGWIN__
-        #define RENITY_LOCAL 
-        #ifdef BUILDING_RENITY
-            #ifdef __GNUC__
-                #define RENITY_API __attribute__ ((dllexport))
-            #else
-                #define RENITY_API __declspec(dllexport)
-            #endif // __GNUC__
-        #else
-            #ifdef __GNUC__
-                #define RENITY_API __attribute__ ((dllimport))
-            #else
-                #define RENITY_API __declspec(dllimport)
-            #endif // __GNUC__
-        #endif // BUILDING_RENITY
-    #else
-        #if __GNUC__ >= 4
-            #define RENITY_API __attribute__ ((visibility ("default")))
-            #define RENITY_LOCAL  __attribute__ ((visibility ("hidden")))
-        #else
-            #define RENITY_API 
-            #define RENITY_LOCAL 
-        #endif
-    #endif // defined _WIN32 || defined __CYGWIN__
+// From https://gcc.gnu.org/wiki/Visibility
+#if defined _WIN32 || defined __CYGWIN__
+#define RENITY_LOCAL
+#ifdef BUILDING_RENITY
+#ifdef __GNUC__
+#define RENITY_API __attribute__((dllexport))
 #else
-    #define RENITY_API
-    #define RENITY_LOCAL
-#endif // RENITY_BUILD_SHARED
-#endif // RENITY_CONFIG_H_
+#define RENITY_API __declspec(dllexport)
+#endif  // __GNUC__
+#else
+#ifdef __GNUC__
+#define RENITY_API __attribute__((dllimport))
+#else
+#define RENITY_API __declspec(dllimport)
+#endif  // __GNUC__
+#endif  // BUILDING_RENITY
+#else
+#if __GNUC__ >= 4
+#define RENITY_API __attribute__((visibility("default")))
+#define RENITY_LOCAL __attribute__((visibility("hidden")))
+#else
+#define RENITY_API
+#define RENITY_LOCAL
+#endif
+#endif  // defined _WIN32 || defined __CYGWIN__
+#else
+#define RENITY_API
+#define RENITY_LOCAL
+#endif  // RENITY_BUILD_SHARED
+#endif  // RENITY_CONFIG_H_

@@ -1,0 +1,33 @@
+1 ICON "app.ico"
+1 VERSIONINFO
+FILEVERSION @version_major@,@version_minor@,@version_patch@,@revision_num@
+PRODUCTVERSION @version_major@,@version_minor@,@version_patch@,@revision_num@
+FILEFLAGSMASK 0x3fL
+#ifdef DEBUG
+ FILEFLAGS 0x1L
+#else
+ FILEFLAGS 0x0L
+#endif
+FILEOS 0x40004L
+FILETYPE 0x1L
+FILESUBTYPE 0x0L
+{
+	BLOCK "StringFileInfo"
+	{
+		BLOCK "040904B0"
+		{
+			VALUE "FileDescription", "@description@"
+			VALUE "InternalName", "@name@.exe"
+			VALUE "OriginalFilename", "@name@.exe"
+			VALUE "CompanyName", "@publisher@"
+			VALUE "LegalCopyright", "Copyright (C) @publisher@. All rights reserved."
+			VALUE "ProductName", "@name@"
+			VALUE "FileVersion", "@version@"
+			VALUE "ProductVersion", "@version@"
+		}
+	}
+	BLOCK "VarFileInfo"
+	{
+		VALUE "Translation", 0x0409, 0x04B0
+	}
+}
