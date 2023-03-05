@@ -25,6 +25,7 @@ struct Sprite::Impl {
   /** Defaults to full-screen VSynced mode at the native screen resolution. */
   Impl() {
     tex = nullptr;
+    texOwner = false;
     scale = Dimension2Dd(1.0, 1.0);
     direction = Point2Dd(0.0, 1.0);  // 0 degrees
     x = 0.0;
@@ -45,6 +46,7 @@ struct Sprite::Impl {
   }
 
   renity::Texture* tex;
+  bool texOwner;
   Point2Di origin;
   Dimension2Dd scale;
   Rect2Di srcRect, destRect;
@@ -63,10 +65,25 @@ RENITY_API Sprite::Sprite(Texture& texture) {
   setTexture(&texture);
 }
 
-RENITY_API Sprite::~Sprite() { delete pimpl_; }
+RENITY_API Sprite::Sprite(const Window& window, const String& path) {
+  pimpl_ = new Impl();
+  setTexture(new renity::Texture(window, path));
+  pimpl_->texOwner = true;
+}
+
+RENITY_API Sprite::~Sprite() {
+  if (pimpl_->tex && pimpl_->texOwner) {
+    delete pimpl_->tex;
+  }
+  delete pimpl_;
+}
 
 RENITY_API void Sprite::setTexture(Texture* texture) {
+  if (pimpl_->tex && pimpl_->texOwner) {
+    delete pimpl_->tex;
+  }
   pimpl_->tex = texture;
+  pimpl_->texOwner = false;
 
   // Reset the image scale and clipping
   if (pimpl_->tex) {
@@ -74,6 +91,7 @@ RENITY_API void Sprite::setTexture(Texture* texture) {
     pimpl_->srcRect.x(0);
     pimpl_->srcRect.y(0);
     pimpl_->srcRect.size(pimpl_->tex->getSize());
+    useDefaultOrigin();
   }
 }
 
@@ -196,9 +214,12 @@ RENITY_API void Sprite::move() {
 
 RENITY_API bool Sprite::draw() {
   if (pimpl_->tex) {
-    return pimpl_->tex->draw(&pimpl_->srcRect, &pimpl_->destRect,
-                             pimpl_->rotation, &pimpl_->origin,
-                             pimpl_->flipHorizontal, pimpl_->flipVertical);
+    Rect2Di originRect = pimpl_->destRect;
+    originRect.x(originRect.x() - pimpl_->origin.x());
+    originRect.y(originRect.y() - pimpl_->origin.y());
+    return pimpl_->tex->draw(&pimpl_->srcRect, &originRect, pimpl_->rotation,
+                             &pimpl_->origin, pimpl_->flipHorizontal,
+                             pimpl_->flipVertical);
   }
 
   return false;

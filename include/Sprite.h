@@ -18,6 +18,7 @@
 
 namespace renity {
 class Texture;
+class Window;
 /** Encapsulates a movable/drawable Sprite. */
 class RENITY_API Sprite {
  public:
@@ -30,6 +31,13 @@ class RENITY_API Sprite {
    * \param texture The Texture that should be used for this Sprite.
    */
   Sprite(Texture& texture);
+
+  /** Texture loader constructor.
+   * Attempts to load and use a texture image using the given path.
+   * \param window The Window whose renderer should be used.
+   * \param path A PhysFS path to an image file.
+   */
+  Sprite(const Window& window, const String& path);
 
   /** Default destructor. */
   ~Sprite();
