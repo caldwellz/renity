@@ -5,9 +5,12 @@ An experiment in 2D C++ game engine design, leveraging SDL for rendering and cro
 ### Requirements
 
 Renity uses the Meson build system and, at the moment, depends on SDL3, SDL3_image, PhysFS, and optionally Git and Doxygen.
-On Debian-based systems (including Ubuntu), usually this means you just need to have a C++ compiler of your choice installed (clang or g++) and then from the project directory, run:
+Since it uses some in-tree 3rd-party code (Dear ImGui, to be specific) embedded as Git submodule(s), it is strongly recommended to clone the source recursively using Git.
+On Debian-based systems (including Ubuntu), usually this means you just need to have a C++ compiler of your choice installed (clang or g++) and then run:
 ```
-sudo apt install meson ninja-build doxygen libsdl3-dev libsdl3-image-dev libphysfs-dev
+sudo apt install git meson ninja-build doxygen libsdl3-dev libsdl3-image-dev libphysfs-dev
+git clone --recurse-submodules https://github.com/caldwellz/renity.git
+cd renity
 meson mybuild
 cd mybuild
 ninja install

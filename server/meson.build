@@ -23,7 +23,7 @@ server_target = executable(
   , server_srcs
   , dependencies : server_deps
   , link_with : lib_target
-  , include_directories : lib_incdir
+  , include_directories : lib_incdirs
   , install : true
   , c_args : server_args
   , cpp_args : server_args

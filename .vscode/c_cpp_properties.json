@@ -4,6 +4,7 @@
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/src",
+                "${workspaceFolder}/src/3rdparty/imgui",
                 "${workspaceFolder}/include",
                 "${workspaceFolder}/builddir/include"
             ],
@@ -21,7 +22,8 @@
         {
             "name": "Win32",
             "includePath": [
-                "${workspaceFolder}/**"
+                "${workspaceFolder}/**",
+                "${workspaceFolder}/src/3rdparty/imgui"
             ],
             "defines": [
                 "BUILDING_RENITY",

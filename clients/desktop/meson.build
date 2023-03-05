@@ -23,7 +23,7 @@ client_desktop_target = executable(
   , client_desktop_srcs
   , dependencies : client_desktop_deps
   , link_with : lib_target
-  , include_directories : lib_incdir
+  , include_directories : lib_incdirs
   , install : true
   , c_args : client_desktop_args
   , cpp_args : client_desktop_args

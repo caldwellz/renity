@@ -37,6 +37,7 @@ lib_srcs = files([
 , 'Texture.cc'
 , 'Window.cc'
 ])
+subdir('3rdparty')
 subdir('utils')
 
 
@@ -81,14 +82,14 @@ lib_target = library(
   meson.project_name()
   , [lib_srcs, versionfile]
   , dependencies : lib_deps
-  , include_directories : lib_incdir
+  , include_directories : lib_incdirs
   , install : true
   , c_args : lib_args
   , cpp_args : lib_args
   , gnu_symbol_visibility : 'hidden'
 )
 declare_dependency(sources : versionfile, link_with : lib_target)
-declare_dependency(include_directories : lib_incdir, link_with : lib_target)
+declare_dependency(include_directories : lib_incdirs, link_with : lib_target)
 
 
 # Generate pkgconfig info

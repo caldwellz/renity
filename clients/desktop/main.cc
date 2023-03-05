@@ -15,10 +15,13 @@
 int main(int argc, char *argv[]) {
   renity::Application app(argc, argv);
   if (!app.initialize(false)) {
-    SDL_ShowSimpleMessageBox(
-        SDL_MESSAGEBOX_ERROR, "Error",
-        "Could not initialize application!\nPlease check logs for details.",
-        NULL);
+    SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
+                    "Could not initialize application! Last SDL error: %s\n",
+                    SDL_GetError());
+    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error",
+                             "Could not initialize application!\nPlease check "
+                             "logs for further details.",
+                             NULL);
     return 1;
   }
   int status = app.run();

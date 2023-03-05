@@ -13,8 +13,11 @@
 #include <SDL3/SDL.h>
 #include <physfs.h>
 
+#include "3rdparty/imgui/imgui.h"
+#include "Sprite.h"
 #include "config.h"
 #include "types.h"
+#include "version.h"
 
 namespace renity {
 struct Application::Impl {
@@ -54,33 +57,68 @@ RENITY_API bool Application::initialize(bool headless) {
                "Application::initialize: Initializing %s application on %s.\n",
                headlessMode, SDL_GetPlatform());
 
+  // Set up PhysFS
   PHYSFS_init(pimpl_->executableName);
   if (!PHYSFS_isInit()) {
-    SDL_SetError(PHYSFS_getLastError());
+    SDL_SetError("Could not init PhysFS: %s", PHYSFS_getLastError());
     return false;
   }
-
-  // TODO: Do application-specific mounts based on publisher and program strings
-  // from version.h
-  if (!PHYSFS_mount(".", "/", 1)) {
-    SDL_SetError(PHYSFS_getLastError());
+  const char *baseDir = PHYSFS_getBaseDir();
+  const char *prefDir = PHYSFS_getPrefDir(PUBLISHER_NAME, PRODUCT_NAME);
+  if (!PHYSFS_mount(baseDir, "/", 0)) {
+    SDL_SetError("Could not mount PhysFS baseDir '%s': %s", baseDir,
+                 PHYSFS_getLastError());
     return false;
   }
+  if (!PHYSFS_mount(prefDir, "/", 1) || !PHYSFS_setWriteDir(prefDir)) {
+    SDL_SetError(
+        "Could not mount PhysFS prefDir '%s' using publisher '%s', product "
+        "'%s': %s",
+        prefDir, PUBLISHER_NAME, PRODUCT_NAME, PHYSFS_getLastError());
+    return false;
+  }
+  PHYSFS_setRoot(PHYSFS_getBaseDir(), "/assets");
 
+  // Log final search paths in debug mode
+#ifdef RENITY_DEBUG
+  char **pathList = PHYSFS_getSearchPath();
+  SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "-- PhysFS search paths:\n",
+               headlessMode, SDL_GetPlatform());
+  for (char **pathIter = pathList; *pathIter != NULL; ++pathIter) {
+    SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "%s\n", *pathIter);
+  }
+  PHYSFS_freeList(pathList);
+#endif
+
+  // Initialize SDL
   Uint32 systems = SDL_INIT_TIMER | SDL_INIT_EVENTS;
   if (!headless) {
     systems |= SDL_INIT_VIDEO | SDL_INIT_AUDIO;
   }
   if (SDL_Init(systems) != 0) return false;
 
-  // TODO: Load window settings from app config
+  // TODO: Load window/display settings from app config
   if (!headless) {
-    pimpl_->window.useFullscreen(false, true);
-    pimpl_->window.size(renity::Dimension2Di(800, 600));
+    // Default to a window taking up 3/4 of the screen, if over a certain size
+    SDL_DisplayID display = SDL_GetPrimaryDisplay();
+    SDL_Rect bounds = {0, 0, 0, 0};
+    SDL_GetDisplayBounds(display, &bounds);
+    SDL_LogDebug(SDL_LOG_CATEGORY_VIDEO,
+                 "Detected bounds for primary display (%i): %ix%i\n", display,
+                 bounds.w, bounds.h);
+    if (bounds.w <= 1366 || bounds.h <= 768) {
+      pimpl_->window.useFullscreen(true, true);
+    } else {
+      bounds.w *= 0.75;
+      bounds.h *= 0.75;
+      pimpl_->window.useFullscreen(false, true);
+    }
+    pimpl_->window.size(renity::Dimension2Di(bounds.w, bounds.h));
     if (!pimpl_->window.open()) {
       return false;
     }
     pimpl_->renderer = pimpl_->window.getRenderer();
+    // SDL_SetRenderVSync(pimpl_->renderer, 0);
   }
 
   return true;
@@ -89,7 +127,81 @@ RENITY_API bool Application::initialize(bool headless) {
 RENITY_API int Application::run() {
   SDL_Event event;
   bool keepGoing = true;
+  bool show_demo_window, show_another_window;
+  Uint32 frames = 0;
+  Uint64 lastFrameTime = SDL_GetTicksNS();
+  Uint64 fpsTime = 0;
+  float fps = 1.0f;
+  Sprite sprite(pimpl_->window, "epic2.png");
+  // sprite.setPosition({50, 50});
+  sprite.setMoveHeading(50.5f);
   while (keepGoing) {
+    const Uint64 timeDelta = SDL_GetTicksNS() - lastFrameTime;
+    lastFrameTime += timeDelta;
+    fpsTime += timeDelta;
+    if (fpsTime >= SDL_NS_PER_SECOND) {
+      fps = (float)frames / ((float)fpsTime / SDL_NS_PER_SECOND);
+      frames = 0;
+      fpsTime = 0;
+    }
+    ++frames;
+
+    sprite.setMoveSpeed(350.0f * ((double)timeDelta / SDL_NS_PER_SECOND));
+    int x = sprite.getPosition().x();
+    int y = sprite.getPosition().y();
+    if (x < 0 || x > pimpl_->window.size().width()) sprite.bounceHorizontal();
+    if (y < 0 || y > pimpl_->window.size().height()) sprite.bounceVertical();
+    sprite.move();
+    sprite.draw();
+
+    // ImGUI demo
+    if (show_demo_window) ImGui::ShowDemoWindow(&show_demo_window);
+
+    // 2. Show a simple window that we create ourselves. We use a Begin/End pair
+    // to create a named window.
+    {
+      static float f = 0.0f;
+      static int counter = 0;
+
+      ImGui::Begin("Hello, world!");  // Create a window called "Hello, world!"
+                                      // and append into it.
+
+      ImGui::Text("This is some useful text.");
+      ImGui::Checkbox(
+          "Demo Window",
+          &show_demo_window);  // Edit bools storing our window open/close state
+      ImGui::Checkbox("Another Window", &show_another_window);
+
+      ImGui::SliderFloat(
+          "float", &f, 0.0f,
+          1.0f);  // Edit 1 float using a slider from 0.0f to 1.0f
+      // ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3
+      // floats representing a color
+
+      if (ImGui::Button(
+              "Button"))  // Buttons return true when clicked (most widgets
+                          // return true when edited/activated)
+        counter++;
+      ImGui::SameLine();
+      ImGui::Text("counter = %d", counter);
+
+      ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / fps,
+                  fps);
+      ImGui::End();
+    }
+
+    // 3. Show another simple window.
+    if (show_another_window) {
+      ImGui::Begin(
+          "Another Window",
+          &show_another_window);  // Pass a pointer to our bool variable (the
+                                  // window will have a closing button that will
+                                  // clear the bool when clicked)
+      ImGui::Text("Hello from another window!");
+      if (ImGui::Button("Close Me")) show_another_window = false;
+      ImGui::End();
+    }
+
     // Pump events, then clear them all out after subsystems react to the
     // updates, only listening for quit here. Subsystems should use
     // SDL_AddEventWatch(), SDL_FilterEvents(), or even SDL_PeepEvents() to get

@@ -106,19 +106,17 @@ class RENITY_API Window {
   /** Get the window's size.
    * Uses an i32 for consistency, even though a u16 should be quite sufficient.
    * Can be called any time (before or after open() or close()), but may not be
-   * \
    * accurate before the window is opened if planning to use the native desktop
-   * \ resolution.
-   * \returns A Dimension2D containing the window's current size, in screen \
+   * resolution.
+   * \returns A Dimension2D containing the window's current size, in screen
    * coordinates (i.e. pixels, except on HighDPI devices).
    */
   Dimension2Di32 size() const;
 
   /** Get the window's size, in actual pixels.
    * Can be called any time (before or after open() or close()), but may not be
-   * \
    * accurate before the window is opened on HighDPI devices and/or if planning
-   * \ to use the native desktop resolution. \returns A Dimension2D containing
+   * to use the native desktop resolution. \returns A Dimension2D containing
    * the window's current size, in pixels.
    */
   Dimension2Di32 sizeInPixels() const;
@@ -126,7 +124,7 @@ class RENITY_API Window {
   /** Set the window's size.
    * Will change the video mode if the window is currently fullscreen.
    * Can be called any time (before or after open() or close()).
-   * \param new_size A window size, in screen coordinates (i.e. pixels, except \
+   * \param new_size A window size, in screen coordinates (i.e. pixels, except
    * on HighDPI devices). A value of 0 for the width or height will be ignored.
    * \returns True on success, false on failure.
    */
@@ -153,6 +151,7 @@ class RENITY_API Window {
  private:
   struct Impl;
   Impl *pimpl_;
+  friend int eventProcessor(void *userdata, SDL_Event *event);
 };
 }  // namespace renity
 #endif  // RENITY_WINDOW_H_

@@ -1,5 +1,5 @@
 # Add the current directory to the include path
-lib_incdir = include_directories('.')
+lib_incdirs = [include_directories('.')]
 
 # Fill in config.h with the build options
 conf_data = configuration_data()

@@ -32,9 +32,9 @@ int main(int argc, char *argv[]) {
   // Start headless app
   renity::Application app(argc, argv);
   if (!app.initialize(true)) {
-    SDL_LogCritical(
-        SDL_LOG_CATEGORY_APPLICATION,
-        "Could not initialize application! Please check logs for details.");
+    SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
+                    "Could not initialize application! Last SDL error: %s\n",
+                    SDL_GetError());
     return 1;
   }
   int status = app.run();

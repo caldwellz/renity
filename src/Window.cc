@@ -12,6 +12,9 @@
 
 #include <SDL3/SDL.h>
 
+#include "3rdparty/imgui/backends/imgui_impl_sdl3.h"
+#include "3rdparty/imgui/backends/imgui_impl_sdlrenderer.h"
+#include "3rdparty/imgui/imgui.h"
 #include "config.h"
 #include "types.h"
 
@@ -20,6 +23,8 @@ struct Window::Impl {
   Impl() {
     window = nullptr;
     renderer = nullptr;
+    guiCtx = nullptr;
+    guiClearColor = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
     title = "Renity Window";
     position = Point2Di32(SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
     size = Dimension2Di32(1, 1);
@@ -29,6 +34,8 @@ struct Window::Impl {
 
   SDL_Window *window;
   SDL_Renderer *renderer;
+  ImGuiContext *guiCtx;
+  ImVec4 guiClearColor;
   String title;
   Point2Di32 position;
   Dimension2Di32 size;
@@ -49,38 +56,67 @@ RENITY_API Window::~Window() {
 // TODO: Make this thread-safe, probably via a mutex in close()
 static int eventProcessor(void *userdata, SDL_Event *event) {
   Window *w = (Window *)userdata;
-  if (event->type >= SDL_EVENT_WINDOW_FIRST &&
-      event->type <= SDL_EVENT_WINDOW_LAST) {
-    if (event->window.windowID != w->getWindowID()) {
-      SDL_LogDebug(SDL_LOG_CATEGORY_VIDEO,
-                   "Window %i ignored event type %i for window %i.\n",
-                   w->getWindowID(), event->window.type,
-                   event->window.windowID);
-      return 1;
-    }
-    switch (event->window.type) {
-      case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
-        w->close();
-        break;
-      default:
-        SDL_LogDebug(SDL_LOG_CATEGORY_VIDEO,
-                     "Unhandled window event type %i on windowId %i.\n",
-                     event->window.type, event->window.windowID);
-    }
-    return 0;
+  const bool windowEvent = event->type >= SDL_EVENT_WINDOW_FIRST &&
+                           event->type <= SDL_EVENT_WINDOW_LAST;
+  const bool currentWindowEvent =
+      windowEvent && event->window.windowID == w->getWindowID();
+
+  // ImGui wants all event types, but filter out ones for other windows and ones
+  // we handle here to avoid confusing it.
+  if (!windowEvent) {
+    ImGui_ImplSDL3_ProcessEvent(event);
+    return 1;
   }
-  return 1;
+  if (!currentWindowEvent) {
+    SDL_LogDebug(SDL_LOG_CATEGORY_VIDEO,
+                 "Window %i ignored event type %i for window %i.\n",
+                 w->getWindowID(), event->window.type, event->window.windowID);
+    return 1;
+  }
+
+  SDL_Renderer *renderer = w->pimpl_->renderer;
+  switch (event->window.type) {
+    case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
+      w->close();
+      break;
+    case SDL_EVENT_WINDOW_RESIZED:
+      SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
+                   "Window::eventProcessor: Window resizing to %ix%i screen "
+                   "coordinates.\n",
+                   event->window.data1, event->window.data2);
+      SDL_SetRenderLogicalPresentation(
+          renderer, event->window.data1, event->window.data2,
+          SDL_LOGICAL_PRESENTATION_LETTERBOX, SDL_SCALEMODE_BEST);
+      break;
+    case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
+      SDL_LogDebug(
+          SDL_LOG_CATEGORY_APPLICATION,
+          "Window::eventProcessor: Window resized to %ix%i actual pixels.\n",
+          event->window.data1, event->window.data2);
+      break;
+    default:
+      ImGui_ImplSDL3_ProcessEvent(event);
+      SDL_LogDebug(SDL_LOG_CATEGORY_VIDEO,
+                   "Unhandled window event type %i on windowId %i.\n",
+                   event->window.type, event->window.windowID);
+  }
+  return 0;
 }
 
 RENITY_API bool Window::isOpen() const { return (pimpl_->renderer); }
 
 RENITY_API bool Window::open() {
-  // Status check
+  // Status checks
   if (isOpen()) return true;
+  if (!IMGUI_CHECKVERSION()) {
+    SDL_SetError("ImGui version mismatch: %s", IMGUI_VERSION);
+    return false;
+  }
 
   // Create and check the window
   uint32_t flags =
       SDL_WINDOW_RESIZABLE | (pimpl_->fullscreen ? SDL_WINDOW_FULLSCREEN : 0);
+  SDL_SetHint(SDL_HINT_IME_SHOW_UI, "1");
   pimpl_->window = SDL_CreateWindow(pimpl_->title.c_str(), pimpl_->position.x(),
                                     pimpl_->position.y(), pimpl_->size.width(),
                                     pimpl_->size.height(), flags);
@@ -144,17 +180,66 @@ RENITY_API bool Window::open() {
     }
   }
 
+  // Handle HighDPI by automatically scaling renderer output. As of writing,
+  // SDL3 auto-adjusts the actual window size, but not the presentation.
+  SDL_SetRenderLogicalPresentation(
+      pimpl_->renderer, pimpl_->size.width(), pimpl_->size.height(),
+      SDL_LOGICAL_PRESENTATION_LETTERBOX, SDL_SCALEMODE_BEST);
+
+  // Log the initial window size
+#ifdef RENITY_DEBUG
+  int trueW, trueH;
+  SDL_GetRenderOutputSize(pimpl_->renderer, &trueW, &trueH);
+  SDL_LogDebug(
+      SDL_LOG_CATEGORY_VIDEO,
+      "Window displaying %ix%i screen coordinates using %ix%i actual pixels.\n",
+      pimpl_->size.width(), pimpl_->size.height(), trueW, trueH);
+#endif
+
+  // Set up ImGui
+  pimpl_->guiCtx = ImGui::CreateContext();
+  ImGui::SetCurrentContext(pimpl_->guiCtx);
+  ImGuiIO &io = ImGui::GetIO();
+  io.MouseDrawCursor = true;
+#ifdef RENITY_DEBUG
+  // Don't hide the OS cursor
+  io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
+#endif
+  // TODO: See ImGui_ImplSDL3_Init for how to set custom cursors (ImGui loads
+  // SDL's there by default) Enable Keyboard Controls io.ConfigFlags |=
+  // ImGuiConfigFlags_NavEnableKeyboard; Enable Gamepad Controls io.ConfigFlags
+  // |= ImGuiConfigFlags_NavEnableGamepad;
+  ImGui::StyleColorsDark();  // TODO: Use custom application theme
+  if (!pimpl_->guiCtx ||
+      !ImGui_ImplSDL3_InitForSDLRenderer(pimpl_->window, pimpl_->renderer) ||
+      !ImGui_ImplSDLRenderer_Init(pimpl_->renderer)) {
+    SDL_SetError("ImGui failed to initialize");
+    return false;
+  }
+
+  // Watch for window events
+  SDL_AddEventWatch(eventProcessor, this);
+
   // Clear the initial backbuffer
   SDL_SetRenderDrawColor(pimpl_->renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
   SDL_RenderClear(pimpl_->renderer);
 
-  // Watch for window events
-  SDL_AddEventWatch(eventProcessor, this);
+  // Start an initial ImGui frame
+  ImGui_ImplSDLRenderer_NewFrame();
+  ImGui_ImplSDL3_NewFrame();
+  ImGui::NewFrame();
 
   return activate();
 }
 
 RENITY_API void Window::close() {
+  if (pimpl_->guiCtx) {
+    ImGui_ImplSDLRenderer_Shutdown();
+    ImGui_ImplSDL3_Shutdown();
+    ImGui::DestroyContext(pimpl_->guiCtx);
+    pimpl_->guiCtx = nullptr;
+  }
+
   if (pimpl_->renderer) {
     SDL_DestroyRenderer(pimpl_->renderer);
     pimpl_->renderer = nullptr;
@@ -171,6 +256,7 @@ RENITY_API bool Window::activate() {
   if (!pimpl_->window) return false;
 
   // Bring the window to the front and focus the input
+  ImGui::SetCurrentContext(pimpl_->guiCtx);
   SDL_RaiseWindow(pimpl_->window);
 
   // Full input grab may not always be desirable because the mouse gets
@@ -186,12 +272,23 @@ RENITY_API bool Window::activate() {
 RENITY_API bool Window::update() {
   if (pimpl_->renderer == nullptr) return false;
 
-  // TODO: Handle SDL window events
+  // Render last frame's GUI
+  ImGui::Render();
+  ImGui_ImplSDLRenderer_RenderDrawData(ImGui::GetDrawData());
 
   // Swap buffers and prepare the new one
-  SDL_RenderPresent(pimpl_->renderer);
-  SDL_SetRenderDrawColor(pimpl_->renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
-  return (SDL_RenderClear(pimpl_->renderer) == 0);
+  const int renderStatus =
+      SDL_RenderPresent(pimpl_->renderer) |
+      SDL_SetRenderDrawColor(pimpl_->renderer, 0, 0, 0, SDL_ALPHA_OPAQUE) |
+      SDL_RenderClear(pimpl_->renderer);
+  if (renderStatus != 0) return false;
+
+  // Start a new ImGui frame
+  ImGui_ImplSDLRenderer_NewFrame();
+  ImGui_ImplSDL3_NewFrame();
+  ImGui::NewFrame();
+
+  return true;
 }
 
 RENITY_API SDL_WindowID Window::getWindowID() const {
