@@ -32,7 +32,8 @@ lib_deps = [dep_sdl, dep_sdlimage, dep_physfs, dep_m]
 
 # List sources and process subdirectories - version file comes later
 lib_srcs = files([
-  'Sprite.cc'
+  'Application.cc'
+, 'Sprite.cc'
 , 'Texture.cc'
 , 'Window.cc'
 ])

@@ -10,11 +10,18 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 
-int main(int argc, char *argv[]) {
-  const char *platformName = SDL_GetPlatform();
-  SDL_Log("Displaying MessageBox for platform '%s'.\n", platformName);
-  SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error Title", platformName,
-                           NULL);
+#include "Application.h"
 
-  return 0;
+int main(int argc, char *argv[]) {
+  renity::Application app(argc, argv);
+  if (!app.initialize(false)) {
+    SDL_ShowSimpleMessageBox(
+        SDL_MESSAGEBOX_ERROR, "Error",
+        "Could not initialize application!\nPlease check logs for details.",
+        NULL);
+    return 1;
+  }
+  int status = app.run();
+  app.destroy();
+  return status;
 }

@@ -61,6 +61,11 @@ class RENITY_API Window {
    */
   bool update();
 
+  /** Get the internal SDL_WindowID or the window.
+   * \returns The numeric ID of the window, or 0 on failure.
+   */
+  SDL_WindowID getWindowID() const;
+
   /** Get the internal SDL_Renderer or the window.
    * \returns An SDL_Renderer pointer if the window is open and there is a \
    * valid renderer; NULL otherwise.

@@ -17,7 +17,6 @@
 
 namespace renity {
 struct Window::Impl {
-  /** Defaults to full-screen VSynced mode at the native screen resolution. */
   Impl() {
     window = nullptr;
     renderer = nullptr;
@@ -45,6 +44,32 @@ RENITY_API Window::Window() {
 RENITY_API Window::~Window() {
   this->close();
   delete this->pimpl_;
+}
+
+// TODO: Make this thread-safe, probably via a mutex in close()
+static int eventProcessor(void *userdata, SDL_Event *event) {
+  Window *w = (Window *)userdata;
+  if (event->type >= SDL_EVENT_WINDOW_FIRST &&
+      event->type <= SDL_EVENT_WINDOW_LAST) {
+    if (event->window.windowID != w->getWindowID()) {
+      SDL_LogDebug(SDL_LOG_CATEGORY_VIDEO,
+                   "Window %i ignored event type %i for window %i.\n",
+                   w->getWindowID(), event->window.type,
+                   event->window.windowID);
+      return 1;
+    }
+    switch (event->window.type) {
+      case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
+        w->close();
+        break;
+      default:
+        SDL_LogDebug(SDL_LOG_CATEGORY_VIDEO,
+                     "Unhandled window event type %i on windowId %i.\n",
+                     event->window.type, event->window.windowID);
+    }
+    return 0;
+  }
+  return 1;
 }
 
 RENITY_API bool Window::isOpen() const { return (pimpl_->renderer); }
@@ -123,6 +148,9 @@ RENITY_API bool Window::open() {
   SDL_SetRenderDrawColor(pimpl_->renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
   SDL_RenderClear(pimpl_->renderer);
 
+  // Watch for window events
+  SDL_AddEventWatch(eventProcessor, this);
+
   return activate();
 }
 
@@ -134,6 +162,7 @@ RENITY_API void Window::close() {
 
   if (pimpl_->window) {
     SDL_DestroyWindow(pimpl_->window);
+    SDL_DelEventWatch(eventProcessor, this);
     pimpl_->window = nullptr;
   }
 }
@@ -163,6 +192,10 @@ RENITY_API bool Window::update() {
   SDL_RenderPresent(pimpl_->renderer);
   SDL_SetRenderDrawColor(pimpl_->renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
   return (SDL_RenderClear(pimpl_->renderer) == 0);
+}
+
+RENITY_API SDL_WindowID Window::getWindowID() const {
+  return SDL_GetWindowID(pimpl_->window);
 }
 
 RENITY_API SDL_Renderer *Window::getRenderer() const {

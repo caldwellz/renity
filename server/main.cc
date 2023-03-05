@@ -8,9 +8,11 @@
  * can obtain one at http://mozilla.org/MPL/2.0/.   *
  ***************************************************/
 
+#include "Application.h"
 #include "version.h"
 using namespace renity;
 
+#include <SDL3/SDL_log.h>
 #include <SDL3/SDL_main.h>
 #include <stdio.h>
 #include <string.h>
@@ -27,5 +29,15 @@ int main(int argc, char *argv[]) {
     printf("Published by %s\n", PUBLISHER_NAME);
   }
 
-  return 0;
+  // Start headless app
+  renity::Application app(argc, argv);
+  if (!app.initialize(true)) {
+    SDL_LogCritical(
+        SDL_LOG_CATEGORY_APPLICATION,
+        "Could not initialize application! Please check logs for details.");
+    return 1;
+  }
+  int status = app.run();
+  app.destroy();
+  return status;
 }
