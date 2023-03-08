@@ -14,10 +14,10 @@
 #include "Dimension2D.h"
 #include "Point2D.h"
 #include "Rect2D.h"
+#include "Texture.h"
 #include "types.h"
 
 namespace renity {
-class Texture;
 class Window;
 /** Encapsulates a movable/drawable Sprite. */
 class RENITY_API Sprite {
@@ -27,17 +27,16 @@ class RENITY_API Sprite {
    */
   Sprite();
 
-  /** Basic constructor.
+  /** Direct constructor.
    * \param texture The Texture that should be used for this Sprite.
    */
-  Sprite(Texture& texture);
+  Sprite(TexturePtr& texture);
 
-  /** Texture loader constructor.
-   * Attempts to load and use a texture image using the given path.
-   * \param window The Window whose renderer should be used.
+  /** Loader constructor.
+   * Attempts to get a Texture resource using the given path.
    * \param path A PhysFS path to an image file.
    */
-  Sprite(const Window& window, const String& path);
+  Sprite(const char* path);
 
   /** Default destructor. */
   ~Sprite();
@@ -48,12 +47,19 @@ class RENITY_API Sprite {
   Sprite& operator=(Sprite& other) = delete;
   Sprite& operator=(const Sprite& other) = delete;
 
-  /** Set the Texture to use for drawing.
+  /** Directly set the Texture to use for drawing.
    * Updates the image origin only if the default one is currently is use.
    * Resets any custom clipping currently in use.
-   * \param texture The new Texture image to use. Can be NULL for no image.
+   * \param texture The new Texture image to use.
    */
-  void setTexture(Texture* texture);
+  void setTexture(TexturePtr& texture);
+
+  /** Load a Texture to use for drawing.
+   * Updates the image origin only if the default one is currently is use.
+   * Resets any custom clipping currently in use.
+   * \param path Path to the new Texture image to use. Can be NULL for no image.
+   */
+  void setTexture(const char* path);
 
   /** Get the current scale of the texture image.
    * \returns A scale multiplier (1.0 for width & height means actual image

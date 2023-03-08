@@ -13,13 +13,14 @@
 
 #include "Point2D.h"
 #include "Rect2D.h"
+#include "Resource.h"
 #include "types.h"
 
 namespace renity {
 class Window;
 
 /** Encapsulates a drawable texture. */
-class RENITY_API Texture {
+class RENITY_API Texture : public Resource {
  public:
   /** Default constructor. */
   Texture();
@@ -35,7 +36,7 @@ class RENITY_API Texture {
    * after. \param window The Window whose renderer should be used for this
    * Texture. \param path A PhysFS path to an image file.
    */
-  Texture(const Window& window, const String& path);
+  Texture(const Window& window, const char* path);
 
   /** Default destructor. */
   ~Texture();
@@ -47,10 +48,9 @@ class RENITY_API Texture {
   Texture& operator=(const Texture& other) = delete;
 
   /** Load a new image file into the Texture.
-   * \param path A PhysFS path to an image file.
-   * \returns True if the new image was successfully loaded, false otherwise.
+   * \param src An SDL_RWops stream opened for reading.
    */
-  bool load(const String path);
+  void load(SDL_RWops* src);
 
   /** Unload (destroy/invalidate) the texture image. */
   void unload();
@@ -79,7 +79,7 @@ class RENITY_API Texture {
   /** Get the texture's underlying image path.
    * \returns A String containing the PhysFS path of the current texture image.
    */
-  String getImagePath() const;
+  // String getImagePath() const;
 
   /** Get the size of the current texture image.
    * \returns A Dimension2D containing the texture's current size in pixels \
@@ -111,9 +111,13 @@ class RENITY_API Texture {
             const bool& flipHorizontal = false,
             const bool& flipVertical = false);
 
+ protected:
+  bool reloadFromSurface();
+
  private:
   struct Impl;
   Impl* pimpl_;
 };
+using TexturePtr = SharedPtr<Texture>;
 }  // namespace renity
 #endif  // RENITY_TEXTURE_H_

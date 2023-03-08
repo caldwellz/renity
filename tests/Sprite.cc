@@ -30,13 +30,13 @@ int main(int argc, char *argv[]) {
   window.useFullscreen(false, false);
   window.size(renity::Dimension2Di(160, 160));
   assert(window.open() && window.isOpen());
-  renity::Texture tex(window, epicFile);
-  assert(tex.isValid());
+  renity::TexturePtr tex(new renity::Texture(window, epicFile));
+  assert(tex->isValid());
 
   // Check constructors and setTexture
   renity::Sprite defSprite;
   assert(!defSprite.draw());
-  defSprite.setTexture(&tex);
+  defSprite.setTexture(tex);
   assert(defSprite.draw());
   defSprite.setTexture(nullptr);
   assert(!defSprite.draw());
@@ -129,7 +129,7 @@ int main(int argc, char *argv[]) {
   }
 
   // Clean up
-  tex.unload();
+  tex->unload();
   window.close();
   SDL_Quit();
   PHYSFS_deinit();

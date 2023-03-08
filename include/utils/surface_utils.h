@@ -11,6 +11,7 @@
 #ifndef RENITY_UTILS_SURFACE_UTILS_H_
 #define RENITY_UTILS_SURFACE_UTILS_H_
 
+#include <SDL3/SDL_rwops.h>
 #include <SDL3/SDL_surface.h>
 
 #include "config.h"
@@ -18,6 +19,12 @@
 #ifdef __cplusplus
 extern "C" {
 #endif  //__cplusplus
+
+/** Load an SDL surface from an SDL_RWops.
+ * @param src An RWops already opened for reading.
+ * @return An SDL_Surface containg the image data, or NULL on failure.
+ */
+RENITY_API SDL_Surface *RENITY_LoadPhysSurfaceRW(SDL_RWops *src);
 
 /**
  * Load an SDL surface from a PhysFS image file.

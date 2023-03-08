@@ -14,7 +14,7 @@
 #include <fenv.h>
 #include <math.h>
 
-#include "Texture.h"
+#include "ResourceManager.h"
 #include "config.h"
 #include "types.h"
 
@@ -25,7 +25,6 @@ struct Sprite::Impl {
   /** Defaults to full-screen VSynced mode at the native screen resolution. */
   Impl() {
     tex = nullptr;
-    texOwner = false;
     scale = Dimension2Dd(1.0, 1.0);
     direction = Point2Dd(0.0, 1.0);  // 0 degrees
     x = 0.0;
@@ -45,8 +44,7 @@ struct Sprite::Impl {
     }
   }
 
-  renity::Texture* tex;
-  bool texOwner;
+  TexturePtr tex;
   Point2Di origin;
   Dimension2Dd scale;
   Rect2Di srcRect, destRect;
@@ -60,39 +58,38 @@ RENITY_API Sprite::Sprite() {
   pimpl_ = new Impl();
 }
 
-RENITY_API Sprite::Sprite(Texture& texture) {
+RENITY_API Sprite::Sprite(TexturePtr& texture) {
   pimpl_ = new Impl();
-  setTexture(&texture);
+  setTexture(texture);
 }
 
-RENITY_API Sprite::Sprite(const Window& window, const String& path) {
+RENITY_API Sprite::Sprite(const char* path) {
   pimpl_ = new Impl();
-  setTexture(new renity::Texture(window, path));
-  pimpl_->texOwner = true;
+  setTexture(path);
 }
 
-RENITY_API Sprite::~Sprite() {
-  if (pimpl_->tex && pimpl_->texOwner) {
-    delete pimpl_->tex;
-  }
-  delete pimpl_;
-}
+RENITY_API Sprite::~Sprite() { delete pimpl_; }
 
-RENITY_API void Sprite::setTexture(Texture* texture) {
-  if (pimpl_->tex && pimpl_->texOwner) {
-    delete pimpl_->tex;
-  }
+RENITY_API void Sprite::setTexture(TexturePtr& texture) {
   pimpl_->tex = texture;
-  pimpl_->texOwner = false;
 
   // Reset the image scale and clipping
   if (pimpl_->tex) {
+    useDefaultOrigin();
     setImageScale(pimpl_->scale);
     pimpl_->srcRect.x(0);
     pimpl_->srcRect.y(0);
     pimpl_->srcRect.size(pimpl_->tex->getSize());
-    useDefaultOrigin();
   }
+}
+
+RENITY_API void Sprite::setTexture(const char* path) {
+  if (!path) {
+    pimpl_->tex.reset();
+    return;
+  }
+  TexturePtr texture = ResourceManager::getActive()->get<Texture>(path);
+  setTexture(texture);
 }
 
 RENITY_API Dimension2Dd Sprite::getImageScale() const { return pimpl_->scale; }

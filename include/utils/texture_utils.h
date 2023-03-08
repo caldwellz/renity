@@ -42,6 +42,35 @@ RENITY_API SDL_Texture *RENITY_LoadPhysTextureEx(SDL_Renderer *renderer,
                                                  const char *fname, int keyFlag,
                                                  const SDL_Point *keyPos);
 
+/**
+ * Load an SDL texture from an SDL_RWops, with extended
+ * options applied to the surface before converting to a texture.
+ * Currently adds the ability to set a color key.
+ * @param renderer The rendering context.
+ * @param src An image RWops already opened for reading.
+ * @param keyFlag Flag indicating whether to enable a transparency color key.
+ * @param keyPos The (zero-indexed) position of the color key pixel.
+ * @return An SDL_Texture containg the image data, or NULL on failure.
+ */
+RENITY_API SDL_Texture *RENITY_LoadPhysTextureExRW(SDL_Renderer *renderer,
+                                                   SDL_RWops *src, int keyFlag,
+                                                   const SDL_Point *keyPos);
+
+/**
+ * Create an SDL texture from an SDL surface, with extended
+ * options applied to the surface before converting to a texture.
+ * Currently adds the ability to set a color key.
+ * @param renderer The rendering context.
+ * @param surf A loaded image surface.
+ * @param keyFlag Flag indicating whether to enable a transparency color key.
+ * @param keyPos The (zero-indexed) position of the color key pixel.
+ * @return An SDL_Texture containg the image data, or NULL on failure.
+ */
+/** Create an SDL texture from an SDL surface, with extended options. */
+RENITY_API SDL_Texture *RENITY_CreateTextureFromSurfaceEx(
+    SDL_Renderer *renderer, SDL_Surface *surf, int keyFlag,
+    const SDL_Point *keyPos);
+
 #ifdef __cplusplus
 }
 #endif  //__cplusplus

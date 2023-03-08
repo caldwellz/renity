@@ -52,38 +52,53 @@ RENITY_API Application::~Application() {
 
 RENITY_API bool Application::initialize(bool headless) {
   pimpl_->headless = headless;
+
+  // Show app info in debug mode
+#ifdef RENITY_DEBUG
   const char *headlessMode = headless ? "headless" : "non-headless";
   SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
                "Application::initialize: Initializing %s application on %s.\n",
                headlessMode, SDL_GetPlatform());
 
-  // Set up PhysFS
+  PHYSFS_Version compiled;
+  PHYSFS_Version linked;
+  PHYSFS_VERSION(&compiled);
+  PHYSFS_getLinkedVersion(&linked);
+  SDL_LogDebug(
+      SDL_LOG_CATEGORY_SYSTEM,
+      "PhysFS versions: %d.%d.%d (compiled against) vs %d.%d.%d (linked).\n",
+      compiled.major, compiled.minor, compiled.patch, linked.major,
+      linked.minor, linked.patch);
   PHYSFS_init(pimpl_->executableName);
+#endif
+
+  // Set up PhysFS
   if (!PHYSFS_isInit()) {
-    SDL_SetError("Could not init PhysFS: %s", PHYSFS_getLastError());
+    SDL_SetError("Could not init PhysFS: %s",
+                 PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
     return false;
   }
   const char *baseDir = PHYSFS_getBaseDir();
   const char *prefDir = PHYSFS_getPrefDir(PUBLISHER_NAME, PRODUCT_NAME);
   if (!PHYSFS_mount(baseDir, "/", 0)) {
     SDL_SetError("Could not mount PhysFS baseDir '%s': %s", baseDir,
-                 PHYSFS_getLastError());
+                 PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
     return false;
   }
   if (!PHYSFS_mount(prefDir, "/", 1) || !PHYSFS_setWriteDir(prefDir)) {
     SDL_SetError(
         "Could not mount PhysFS prefDir '%s' using publisher '%s', product "
         "'%s': %s",
-        prefDir, PUBLISHER_NAME, PRODUCT_NAME, PHYSFS_getLastError());
+        prefDir, PUBLISHER_NAME, PRODUCT_NAME,
+        PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
     return false;
   }
-  PHYSFS_setRoot(PHYSFS_getBaseDir(), "/assets");
+  // PHYSFS_setRoot(PHYSFS_getBaseDir(), "/assets");
 
   // Log final search paths in debug mode
 #ifdef RENITY_DEBUG
   char **pathList = PHYSFS_getSearchPath();
-  SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "-- PhysFS search paths:\n",
-               headlessMode, SDL_GetPlatform());
+  SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "-- PhysFS search paths:\n");
   for (char **pathIter = pathList; *pathIter != NULL; ++pathIter) {
     SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "%s\n", *pathIter);
   }
@@ -119,8 +134,12 @@ RENITY_API bool Application::initialize(bool headless) {
     }
     pimpl_->renderer = pimpl_->window.getRenderer();
     // SDL_SetRenderVSync(pimpl_->renderer, 0);
+    Sprite spriteA("epic2.png");
+    spriteA.draw();
+    Sprite spriteB("epic2.png");
+    spriteB.draw();
+    SDL_Log("*** Initial Sprites going out of scope ***\n");
   }
-
   return true;
 }
 
@@ -132,9 +151,13 @@ RENITY_API int Application::run() {
   Uint64 lastFrameTime = SDL_GetTicksNS();
   Uint64 fpsTime = 0;
   float fps = 1.0f;
-  Sprite sprite(pimpl_->window, "epic2.png");
-  // sprite.setPosition({50, 50});
-  sprite.setMoveHeading(50.5f);
+  Sprite spriteA("epic2.png");
+  Sprite spriteB("epic2.png");
+  spriteA.setPosition({100, 100});
+  spriteB.setPosition({100, 100});
+  srand(SDL_GetTicksNS());
+  spriteA.setMoveHeading(rand());
+  spriteB.setMoveHeading(rand());
   while (keepGoing) {
     const Uint64 timeDelta = SDL_GetTicksNS() - lastFrameTime;
     lastFrameTime += timeDelta;
@@ -146,13 +169,21 @@ RENITY_API int Application::run() {
     }
     ++frames;
 
-    sprite.setMoveSpeed(350.0f * ((double)timeDelta / SDL_NS_PER_SECOND));
-    int x = sprite.getPosition().x();
-    int y = sprite.getPosition().y();
-    if (x < 0 || x > pimpl_->window.size().width()) sprite.bounceHorizontal();
-    if (y < 0 || y > pimpl_->window.size().height()) sprite.bounceVertical();
-    sprite.move();
-    sprite.draw();
+    const double moveSpeed = 600.0f * ((double)timeDelta / SDL_NS_PER_SECOND);
+    spriteA.setMoveSpeed(moveSpeed);
+    spriteB.setMoveSpeed(moveSpeed);
+    int x = spriteA.getPosition().x();
+    int y = spriteA.getPosition().y();
+    if (x < 0 || x > pimpl_->window.size().width()) spriteA.bounceHorizontal();
+    if (y < 0 || y > pimpl_->window.size().height()) spriteA.bounceVertical();
+    x = spriteB.getPosition().x();
+    y = spriteB.getPosition().y();
+    if (x < 0 || x > pimpl_->window.size().width()) spriteB.bounceHorizontal();
+    if (y < 0 || y > pimpl_->window.size().height()) spriteB.bounceVertical();
+    spriteA.move();
+    spriteB.move();
+    spriteA.draw();
+    spriteB.draw();
 
     // ImGUI demo
     if (show_demo_window) ImGui::ShowDemoWindow(&show_demo_window);

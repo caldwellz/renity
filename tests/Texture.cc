@@ -17,6 +17,7 @@
 
 #include "Window.h"
 #include "resources/epic_png_zip.h"
+#include "utils/physfsrwops.h"
 
 int main(int argc, char *argv[]) {
   // Initialization and basic sanity checks
@@ -42,28 +43,29 @@ int main(int argc, char *argv[]) {
   renity::Dimension2Di uninitializedSize = basicTex.getSize();
   assert(0 == uninitializedSize.width());
   assert(0 == uninitializedSize.height());
-  assert(0 == basicTex.getImagePath().compare(""));
+  // assert(0 == basicTex.getImagePath().compare(""));
 
   // Check initialized image properties
   renity::Dimension2Di epicSize = fullTex.getSize();
   assert(epicWidth == epicSize.width());
   assert(epicHeight == epicSize.height());
-  assert(0 == fullTex.getImagePath().compare(epicFile));
+  // assert(0 == fullTex.getImagePath().compare(epicFile));
 
   // Check unload/reload
   assert(fullTex.isValid());
   fullTex.unload();
   assert(!fullTex.isValid());
-  assert(fullTex.load(epicFile));
+  fullTex.load(PHYSFSRWOPS_openRead(epicFile));
   assert(fullTex.isValid());
-  assert(fullTex.load(epicFile));
+  fullTex.load(PHYSFSRWOPS_openRead(epicFile));
   assert(fullTex.isValid());
   fullTex.unload();
   assert(!fullTex.isValid());
 
   // Check window-setting
+  assert(!defTex.setWindow(window));
+  defTex.load(PHYSFSRWOPS_openRead(epicFile));
   assert(defTex.setWindow(window));
-  assert(defTex.load(epicFile));
   assert(defTex.isValid());
 
   // Check color key

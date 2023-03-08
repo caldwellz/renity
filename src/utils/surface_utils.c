@@ -14,11 +14,19 @@
 
 #include "utils/physfsrwops.h"
 
+/** Load an SDL surface from an SDL_RWops. */
+RENITY_API SDL_Surface *RENITY_LoadPhysSurfaceRW(SDL_RWops *src) {
+  if (src) {
+    return IMG_Load_RW(src, SDL_TRUE);
+  }
+  return NULL;
+}
+
 /** Load an SDL surface from a PhysFS image file. */
 RENITY_API SDL_Surface *RENITY_LoadPhysSurface(const char *fname) {
   if (fname) {
     SDL_RWops *rw = PHYSFSRWOPS_openRead(fname);
-    if (rw) return IMG_Load_RW(rw, SDL_TRUE);
+    return RENITY_LoadPhysSurfaceRW(rw);
   }
 
   return NULL;

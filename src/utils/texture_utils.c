@@ -37,3 +37,34 @@ RENITY_API SDL_Texture *RENITY_LoadPhysTextureEx(SDL_Renderer *renderer,
 
   return NULL;
 }
+
+/** Create an SDL texture from an SDL_RWops, with extended options. */
+RENITY_API SDL_Texture *RENITY_LoadPhysTextureExRW(SDL_Renderer *renderer,
+                                                   SDL_RWops *src, int keyFlag,
+                                                   const SDL_Point *keyPos) {
+  if (renderer && src) {
+    SDL_Surface *surf = RENITY_LoadPhysSurfaceRW(src);
+    if (surf) {
+      SDL_Texture *tex =
+          RENITY_CreateTextureFromSurfaceEx(renderer, surf, keyFlag, keyPos);
+      SDL_DestroySurface(surf);
+      return tex;
+    }
+  }
+
+  return NULL;
+}
+
+/** Create an SDL texture from an SDL surface, with extended options. */
+RENITY_API SDL_Texture *RENITY_CreateTextureFromSurfaceEx(
+    SDL_Renderer *renderer, SDL_Surface *surf, int keyFlag,
+    const SDL_Point *keyPos) {
+  if (renderer && surf) {
+    if (keyFlag) {
+      if (RENITY_EnableColorKey(surf, keyPos) != 0) return NULL;
+    }
+    return SDL_CreateTextureFromSurface(renderer, surf);
+  }
+
+  return NULL;
+}
