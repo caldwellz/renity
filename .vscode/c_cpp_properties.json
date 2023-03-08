@@ -6,7 +6,8 @@
                 "${workspaceFolder}/src",
                 "${workspaceFolder}/src/3rdparty/imgui",
                 "${workspaceFolder}/include",
-                "${workspaceFolder}/builddir/include"
+                "${workspaceFolder}/builddir/include",
+                "${workspaceFolder}/buildlin/include"
             ],
             "defines": [
                 "BUILDING_RENITY",
