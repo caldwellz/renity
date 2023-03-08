@@ -15,10 +15,12 @@
 #include "3rdparty/imgui/backends/imgui_impl_sdl3.h"
 #include "3rdparty/imgui/backends/imgui_impl_sdlrenderer.h"
 #include "3rdparty/imgui/imgui.h"
+#include "ResourceManager.h"
 #include "config.h"
 #include "types.h"
 
 namespace renity {
+Window *currentWindow = nullptr;
 struct Window::Impl {
   Impl() {
     window = nullptr;
@@ -35,6 +37,7 @@ struct Window::Impl {
   SDL_Window *window;
   SDL_Renderer *renderer;
   ImGuiContext *guiCtx;
+  ResourceManager resMgr;
   ImVec4 guiClearColor;
   String title;
   Point2Di32 position;
@@ -54,7 +57,7 @@ RENITY_API Window::~Window() {
 }
 
 // TODO: Make this thread-safe, probably via a mutex in close()
-static int eventProcessor(void *userdata, SDL_Event *event) {
+int windowEventProcessor(void *userdata, SDL_Event *event) {
   Window *w = (Window *)userdata;
   const bool windowEvent = event->type >= SDL_EVENT_WINDOW_FIRST &&
                            event->type <= SDL_EVENT_WINDOW_LAST;
@@ -80,19 +83,20 @@ static int eventProcessor(void *userdata, SDL_Event *event) {
       w->close();
       break;
     case SDL_EVENT_WINDOW_RESIZED:
-      SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
-                   "Window::eventProcessor: Window resizing to %ix%i screen "
-                   "coordinates.\n",
-                   event->window.data1, event->window.data2);
+      SDL_LogDebug(
+          SDL_LOG_CATEGORY_APPLICATION,
+          "Window::windowEventProcessor: Window resizing to %ix%i screen "
+          "coordinates.\n",
+          event->window.data1, event->window.data2);
       SDL_SetRenderLogicalPresentation(
           renderer, event->window.data1, event->window.data2,
           SDL_LOGICAL_PRESENTATION_LETTERBOX, SDL_SCALEMODE_BEST);
       break;
     case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
-      SDL_LogDebug(
-          SDL_LOG_CATEGORY_APPLICATION,
-          "Window::eventProcessor: Window resized to %ix%i actual pixels.\n",
-          event->window.data1, event->window.data2);
+      SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
+                   "Window::windowEventProcessor: Window resized to %ix%i "
+                   "actual pixels.\n",
+                   event->window.data1, event->window.data2);
       break;
     default:
       ImGui_ImplSDL3_ProcessEvent(event);
@@ -218,7 +222,7 @@ RENITY_API bool Window::open() {
   }
 
   // Watch for window events
-  SDL_AddEventWatch(eventProcessor, this);
+  SDL_AddEventWatch(windowEventProcessor, this);
 
   // Clear the initial backbuffer
   SDL_SetRenderDrawColor(pimpl_->renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
@@ -247,9 +251,11 @@ RENITY_API void Window::close() {
 
   if (pimpl_->window) {
     SDL_DestroyWindow(pimpl_->window);
-    SDL_DelEventWatch(eventProcessor, this);
+    SDL_DelEventWatch(windowEventProcessor, this);
     pimpl_->window = nullptr;
   }
+
+  if (currentWindow == this) currentWindow = nullptr;
 }
 
 RENITY_API bool Window::activate() {
@@ -266,6 +272,11 @@ RENITY_API bool Window::activate() {
   if (grabbed && grabbed != pimpl_->window)
     SDL_SetWindowGrab(pimpl_->window, SDL_TRUE);
 
+  // Each Texture is bound to the Window it was created under.
+  // As such, each Window needs its own ResourceManager context.
+  pimpl_->resMgr.activate();
+
+  currentWindow = this;
   return true;
 }
 

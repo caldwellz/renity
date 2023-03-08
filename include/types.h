@@ -11,25 +11,55 @@
 #ifndef RENITY_TYPES_H_
 #define RENITY_TYPES_H_
 
+// For RENITY_USE_STL
+#include "config.h"
+
 // Common types and SDL's C language support
 #include <SDL3/SDL_stdinc.h>
 
 #ifdef __cplusplus
-// For RENITY_USE_STL
-#include "config.h"
 #ifdef RENITY_USE_STL
+// PORTABILITY NOTE: Some features require RTTI and at least C++11
+#include <memory>
 #include <string>
+#include <type_traits>
+#include <typeinfo>
 #include <vector>
 
 namespace renity {
-using String = std::string;
+template <class Base, class Derived>
+constexpr void requireBaseOf() {
+  static_assert(std::is_base_of<Base, Derived>::value,
+                "Type is not derived from the required base class.");
+}
+/*
+template <class T, class U>
+using dynamicPointerCast = std::dynamic_pointer_cast<T, U>;
+template <class T, class U>
+using staticPointerCast = std::static_pointer_cast<T, U>;
+template <class T, class U>
+using makeSharedPtr = std::make_shared<T, U>;
+template <typename T>
+using typeHash = typeid(T).hash_code;
+*/
+// using declarations don't work with these for some reason...
+#define dynamicPointerCast std::dynamic_pointer_cast
+#define staticPointerCast std::static_pointer_cast
+#define makeSharedPtr std::make_shared
+#define typeHash(T) typeid(T).hash_code()
+
+template <typename T>
+using SharedPtr = std::shared_ptr<T>;
+template <typename T>
+using WeakPtr = std::weak_ptr<T>;
 template <typename T>
 using Vector = std::vector<T>;
+
+using String = std::string;
 }  // namespace renity
 #else
-// TODO: Find replacements for platforms with no STL
 #error \
-    "It appears you're not using the C++ STL. Please specify a replacement String and Vector."
+    "It appears you're not using the C++ STL. Please replace features here as needed."
 #endif  // RENITY_HAVE_STL
 #endif  // __cplusplus
 #endif  // RENITY_TYPES_H_

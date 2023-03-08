@@ -32,6 +32,14 @@ class RENITY_API Window {
   Window &operator=(Window &other) = delete;
   Window &operator=(const Window &other) = delete;
 
+  /** Get the active (current) Window.
+   * \returns A pointer to the last-activated Window, or null if none are open.
+   */
+  static Window *getActive() {
+    extern Window *currentWindow;
+    return currentWindow;
+  }
+
   /** Check whether the window is currently open.
    * \returns True if the window is currently open (and hardware-accelerated), \
    * false otherwise.
@@ -151,7 +159,7 @@ class RENITY_API Window {
  private:
   struct Impl;
   Impl *pimpl_;
-  friend int eventProcessor(void *userdata, SDL_Event *event);
+  friend int windowEventProcessor(void *userdata, SDL_Event *event);
 };
 }  // namespace renity
 #endif  // RENITY_WINDOW_H_

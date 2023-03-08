@@ -2,7 +2,7 @@ project('renity', ['c', 'cpp']
   , version : '0.1.0'
   , license: 'MPL-2.0'
   , meson_version : '>=0.50.0'
-  , default_options : ['buildtype=debug', 'warning_level=3', 'cpp_eh=none', 'cpp_rtti=false', 'cpp_std=c++14', 'prefix=/usr/local'])
+  , default_options : ['buildtype=debug', 'warning_level=3', 'cpp_eh=none', 'cpp_rtti=true', 'cpp_std=c++11', 'prefix=/usr/local'])
 
 
 # Add DEBUG/NDEBUG defines
