@@ -13,6 +13,9 @@
 #include <SDL3/SDL.h>
 #include <physfs.h>
 
+#ifdef RENITY_DEBUG
+#include "3rdparty/dmon/dmon.h"
+#endif
 #include "3rdparty/imgui/imgui.h"
 #include "Sprite.h"
 #include "config.h"
@@ -53,7 +56,7 @@ RENITY_API Application::~Application() {
 RENITY_API bool Application::initialize(bool headless) {
   pimpl_->headless = headless;
 
-  // Show app info in debug mode
+  // Show app info and watch for resource changes in debug mode
 #ifdef RENITY_DEBUG
   const char *headlessMode = headless ? "headless" : "non-headless";
   SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
@@ -64,15 +67,16 @@ RENITY_API bool Application::initialize(bool headless) {
   PHYSFS_Version linked;
   PHYSFS_VERSION(&compiled);
   PHYSFS_getLinkedVersion(&linked);
-  SDL_LogDebug(
+  SDL_LogVerbose(
       SDL_LOG_CATEGORY_SYSTEM,
       "PhysFS versions: %d.%d.%d (compiled against) vs %d.%d.%d (linked).\n",
       compiled.major, compiled.minor, compiled.patch, linked.major,
       linked.minor, linked.patch);
-  PHYSFS_init(pimpl_->executableName);
+  dmon_init();
 #endif
 
   // Set up PhysFS
+  PHYSFS_init(pimpl_->executableName);
   if (!PHYSFS_isInit()) {
     SDL_SetError("Could not init PhysFS: %s",
                  PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
@@ -151,10 +155,11 @@ RENITY_API int Application::run() {
   Uint64 lastFrameTime = SDL_GetTicksNS();
   Uint64 fpsTime = 0;
   float fps = 1.0f;
-  Sprite spriteA("epic2.png");
+  Sprite spriteA("epic.png");
   Sprite spriteB("epic2.png");
-  spriteA.setPosition({100, 100});
-  spriteB.setPosition({100, 100});
+  spriteA.setPosition(
+      {pimpl_->window.size().width() / 2, pimpl_->window.size().height() / 2});
+  spriteB.setPosition(spriteA.getPosition());
   srand(SDL_GetTicksNS());
   spriteA.setMoveHeading(rand());
   spriteB.setMoveHeading(rand());
@@ -258,6 +263,9 @@ RENITY_API int Application::run() {
 }
 
 RENITY_API void Application::destroy() {
+#ifdef RENITY_DEBUG
+  dmon_deinit();
+#endif
   pimpl_->window.close();
   SDL_Quit();
   PHYSFS_deinit();

@@ -27,11 +27,11 @@ class Resource {
   Resource &operator=(const Resource &other) = delete;
 
   /** Load the resource from an SDL_RWops stream.
-   * Derived classes should start with a valid, default state on construction
-   * (such as a blank texture). This function then may (or may not) be called at
-   * any time to signal e.g. a replaced or deleted file.
-   * @param src A read-only SDL_RWops stream. If NULL, a derived class
-   * should clean up and revert to its default state.
+   * Derived classes should start in a usable, empty state on construction.
+   * This function then may (or may not) be called at any time to signal e.g. a
+   * replaced or deleted file.
+   * @param src A read-only SDL_RWops stream. If NULL, a derived class should
+   * clean up as needed and switch to a default state (such as a blank texture).
    */
   virtual void load(SDL_RWops *src) = 0;
 };

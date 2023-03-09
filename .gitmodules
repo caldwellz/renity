@@ -1,3 +1,9 @@
 [submodule "src/3rdparty/imgui"]
 	path = src/3rdparty/imgui
 	url = https://github.com/ocornut/imgui.git
+[submodule "src/3rdparty/dmon"]
+	path = src/3rdparty/dmon
+	url = https://github.com/septag/dmon.git
+[submodule "src/3rdparty/incbin"]
+	path = src/3rdparty/incbin
+	url = https://github.com/graphitemaster/incbin.git

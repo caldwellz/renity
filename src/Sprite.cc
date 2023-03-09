@@ -36,14 +36,6 @@ struct Sprite::Impl {
     flipVertical = false;
   }
 
-  void updateImageOrigin() {
-    if (usingDefaultOrigin) {
-      // Use the default SDL origin (dstrect.w / 2, dstrect.h / 2)
-      origin.x(destRect.width() / 2);
-      origin.y(destRect.height() / 2);
-    }
-  }
-
   TexturePtr tex;
   Point2Di origin;
   Dimension2Dd scale;
@@ -71,15 +63,20 @@ RENITY_API Sprite::Sprite(const char* path) {
 RENITY_API Sprite::~Sprite() { delete pimpl_; }
 
 RENITY_API void Sprite::setTexture(TexturePtr& texture) {
-  pimpl_->tex = texture;
+  if (!texture) {
+    pimpl_->tex.reset();
+    return;
+  }
 
-  // Reset the image scale and clipping
-  if (pimpl_->tex) {
+  if (pimpl_->tex != texture) {
+    pimpl_->tex = texture;
+
+    // Reset the image scale and clipping
     useDefaultOrigin();
-    setImageScale(pimpl_->scale);
     pimpl_->srcRect.x(0);
     pimpl_->srcRect.y(0);
     pimpl_->srcRect.size(pimpl_->tex->getSize());
+    setImageScale(pimpl_->scale);
   }
 }
 
@@ -100,7 +97,6 @@ RENITY_API void Sprite::setImageScale(const Dimension2Dd& scale) {
     Dimension2Di imageSize = pimpl_->tex->getSize();
     pimpl_->destRect.width(scale.width() * imageSize.width());
     pimpl_->destRect.height(scale.height() * imageSize.height());
-    pimpl_->updateImageOrigin();
   }
 }
 
@@ -110,7 +106,13 @@ RENITY_API void Sprite::setImageClip(const Rect2Di& sourceClip) {
   pimpl_->srcRect = sourceClip;
 }
 
-RENITY_API Point2Di Sprite::getImageOrigin() const { return pimpl_->origin; }
+RENITY_API Point2Di Sprite::getImageOrigin() const {
+  if (pimpl_->usingDefaultOrigin) {
+    Dimension2Di size = pimpl_->tex->getSize();
+    return Point2Di(size.width() / 2, size.height() / 2);
+  }
+  return pimpl_->origin;
+}
 
 RENITY_API void Sprite::setImageOrigin(const Point2Di& origin) {
   pimpl_->usingDefaultOrigin = false;
@@ -119,7 +121,6 @@ RENITY_API void Sprite::setImageOrigin(const Point2Di& origin) {
 
 RENITY_API void Sprite::useDefaultOrigin() {
   pimpl_->usingDefaultOrigin = true;
-  pimpl_->updateImageOrigin();
 }
 
 RENITY_API double Sprite::getImageRotation() const { return pimpl_->rotation; }
@@ -211,14 +212,19 @@ RENITY_API void Sprite::move() {
 
 RENITY_API bool Sprite::draw() {
   if (pimpl_->tex) {
+#ifdef RENITY_DEBUG
+    // The Texture's size may have changed during a hot-reload
+    pimpl_->srcRect.size(pimpl_->tex->getSize());
+    setImageScale(pimpl_->scale);
+#endif
+    const Point2Di& origin = getImageOrigin();
     Rect2Di originRect = pimpl_->destRect;
-    originRect.x(originRect.x() - pimpl_->origin.x());
-    originRect.y(originRect.y() - pimpl_->origin.y());
+    originRect.x(originRect.x() - origin.x());
+    originRect.y(originRect.y() - origin.y());
     return pimpl_->tex->draw(&pimpl_->srcRect, &originRect, pimpl_->rotation,
-                             &pimpl_->origin, pimpl_->flipHorizontal,
+                             &origin, pimpl_->flipHorizontal,
                              pimpl_->flipVertical);
   }
-
   return false;
 }
 }  // namespace renity

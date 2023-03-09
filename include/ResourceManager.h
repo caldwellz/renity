@@ -37,9 +37,8 @@ class RENITY_API ResourceManager {
   template <typename T>
   SharedPtr<T> get(const char *path) {
     requireBaseOf<Resource, T>();
-    SharedPtr<Resource> res =
-        getOrCreate(path, typeHash(T), &createResource<T>);
-    return staticPointerCast<T>(res);
+    SharedPtr<Resource> res = getOrCreate(path, &createResource<T>);
+    return dynamicPointerCast<T>(res);
   }
 
   /** Get the active (current) ResourceManager.
@@ -65,14 +64,12 @@ class RENITY_API ResourceManager {
  protected:
   template <typename T>
   static Resource *createResource(SDL_RWops *ops) {
-    // Return a default resource unless the data file was opened successfully.
+    // Should return a default resource if the file was not opened successfully.
     T *res = new T();
-    if (ops) {
-      res->load(ops);
-    }
+    res->load(ops);
     return res;
   }
-  SharedPtr<Resource> getOrCreate(const char *path, size_t type,
+  SharedPtr<Resource> getOrCreate(const char *path,
                                   Resource *(*factory)(SDL_RWops *));
 
  private:
