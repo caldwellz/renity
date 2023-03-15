@@ -1,5 +1,6 @@
 utils_headers = [
     'physfsrwops.h'
+  , 'rwops_utils.h'
   , 'surface_utils.h'
   , 'texture_utils.h']
 

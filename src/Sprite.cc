@@ -50,6 +50,12 @@ RENITY_API Sprite::Sprite() {
   pimpl_ = new Impl();
 }
 
+RENITY_API Sprite::Sprite(Sprite& other) { pimpl_ = new Impl(*other.pimpl_); }
+
+RENITY_API Sprite::Sprite(const Sprite& other) {
+  pimpl_ = new Impl(*other.pimpl_);
+}
+
 RENITY_API Sprite::Sprite(TexturePtr& texture) {
   pimpl_ = new Impl();
   setTexture(texture);

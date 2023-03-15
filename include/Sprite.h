@@ -27,6 +27,10 @@ class RENITY_API Sprite {
    */
   Sprite();
 
+  // Copy constructors
+  Sprite(Sprite& other);
+  Sprite(const Sprite& other);
+
   /** Direct constructor.
    * \param texture The Texture that should be used for this Sprite.
    */
@@ -41,9 +45,7 @@ class RENITY_API Sprite {
   /** Default destructor. */
   ~Sprite();
 
-  // TODO: Implement proper copy/move semantics, if needed.
-  Sprite(Sprite& other) = delete;
-  Sprite(const Sprite& other) = delete;
+  // TODO: Implement proper move semantics, if needed.
   Sprite& operator=(Sprite& other) = delete;
   Sprite& operator=(const Sprite& other) = delete;
 

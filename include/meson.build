@@ -15,6 +15,7 @@ lib_headers = [
     conffile
   , 'types.h'
   , 'version.h'
+  , 'Dictionary.h'
   , 'Dimension2D.h'
   , 'HashTable.h'
   , 'Point2D.h'

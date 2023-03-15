@@ -17,6 +17,8 @@
 #include "3rdparty/dmon/dmon.h"
 #endif
 #include "3rdparty/imgui/imgui.h"
+#include "Dictionary.h"
+#include "ResourceManager.h"
 #include "Sprite.h"
 #include "config.h"
 #include "types.h"
@@ -60,7 +62,8 @@ RENITY_API bool Application::initialize(bool headless) {
 #ifdef RENITY_DEBUG
   const char *headlessMode = headless ? "headless" : "non-headless";
   SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
-               "Application::initialize: Initializing %s application on %s.\n",
+               "Application::initialize: Initializing %s debug-mode "
+               "application on %s.\n",
                headlessMode, SDL_GetPlatform());
 
   PHYSFS_Version compiled;
@@ -84,17 +87,17 @@ RENITY_API bool Application::initialize(bool headless) {
   }
   const char *baseDir = PHYSFS_getBaseDir();
   const char *prefDir = PHYSFS_getPrefDir(PUBLISHER_NAME, PRODUCT_NAME);
-  if (!PHYSFS_mount(baseDir, "/", 0)) {
-    SDL_SetError("Could not mount PhysFS baseDir '%s': %s", baseDir,
-                 PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
-    return false;
-  }
-  if (!PHYSFS_mount(prefDir, "/", 1) || !PHYSFS_setWriteDir(prefDir)) {
+  if (!PHYSFS_mount(prefDir, "/", 0) || !PHYSFS_setWriteDir(prefDir)) {
     SDL_SetError(
         "Could not mount PhysFS prefDir '%s' using publisher '%s', product "
         "'%s': %s",
         prefDir, PUBLISHER_NAME, PRODUCT_NAME,
         PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
+    return false;
+  }
+  if (!PHYSFS_mount(baseDir, "/", 1)) {
+    SDL_SetError("Could not mount PhysFS baseDir '%s': %s", baseDir,
+                 PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
     return false;
   }
   // PHYSFS_setRoot(PHYSFS_getBaseDir(), "/assets");
@@ -137,33 +140,41 @@ RENITY_API bool Application::initialize(bool headless) {
       return false;
     }
     pimpl_->renderer = pimpl_->window.getRenderer();
-    // SDL_SetRenderVSync(pimpl_->renderer, 0);
-    Sprite spriteA("epic2.png");
-    spriteA.draw();
-    Sprite spriteB("epic2.png");
-    spriteB.draw();
-    SDL_Log("*** Initial Sprites going out of scope ***\n");
   }
+
+  // TEST: Dictionary
+  DictionaryPtr config =
+      ResourceManager::getActive()->get<Dictionary>("config.cbor");
+  config->put<bool>("stuff", true);
+  SDL_Log("config.cbor[foo]: %s\n", config->keep<const char *>("foo", "bar"));
+  config->put<Sint8>("thing", -42);
+  config->keep<const char *>("bar.woof.foo", "xyzzy");
+  config->put<const char *>("bar.woof.baz", "abcd");
+  config->saveJSON("config.json");
+  config = ResourceManager::getActive()->get<Dictionary>("config.json");
+  SDL_Log("config.json[thing]: %u\n", config->keep<Uint16>("thing", 1));
+  SDL_Log("config.json[bar.woof.baz]: %s\n",
+          config->keep<const char *>("bar.woof.baz", "arf"));
+  SDL_Log("config.json[bar.woof.foo]: %s\n",
+          config->keep<const char *>("bar.woof.foo", "arf"));
+
   return true;
 }
 
 RENITY_API int Application::run() {
   SDL_Event event;
   bool keepGoing = true;
-  bool show_demo_window, show_another_window;
+  bool show_demo_window;
   Uint32 frames = 0;
   Uint64 lastFrameTime = SDL_GetTicksNS();
   Uint64 fpsTime = 0;
   float fps = 1.0f;
-  Sprite spriteA("epic.png");
-  Sprite spriteB("epic2.png");
-  spriteA.setPosition(
-      {pimpl_->window.size().width() / 2, pimpl_->window.size().height() / 2});
-  spriteB.setPosition(spriteA.getPosition());
+  Vector<Sprite> sprites;
+  Uint64 spriteCount = 0;
   srand(SDL_GetTicksNS());
-  spriteA.setMoveHeading(rand());
-  spriteB.setMoveHeading(rand());
+  // SDL_SetRenderVSync(pimpl_->renderer, 0);
   while (keepGoing) {
+    // Recalculate displayed FPS every second
     const Uint64 timeDelta = SDL_GetTicksNS() - lastFrameTime;
     lastFrameTime += timeDelta;
     fpsTime += timeDelta;
@@ -174,21 +185,27 @@ RENITY_API int Application::run() {
     }
     ++frames;
 
-    const double moveSpeed = 600.0f * ((double)timeDelta / SDL_NS_PER_SECOND);
-    spriteA.setMoveSpeed(moveSpeed);
-    spriteB.setMoveSpeed(moveSpeed);
-    int x = spriteA.getPosition().x();
-    int y = spriteA.getPosition().y();
-    if (x < 0 || x > pimpl_->window.size().width()) spriteA.bounceHorizontal();
-    if (y < 0 || y > pimpl_->window.size().height()) spriteA.bounceVertical();
-    x = spriteB.getPosition().x();
-    y = spriteB.getPosition().y();
-    if (x < 0 || x > pimpl_->window.size().width()) spriteB.bounceHorizontal();
-    if (y < 0 || y > pimpl_->window.size().height()) spriteB.bounceVertical();
-    spriteA.move();
-    spriteB.move();
-    spriteA.draw();
-    spriteB.draw();
+    // Add more sprites until we start dropping frames
+    // const double realtimeFPS = (double)SDL_NS_PER_SECOND / timeDelta;
+    if (spriteCount < 10) {  // realtimeFPS > 59.9999) {
+      sprites.emplace_back("epic.png");
+      sprites.back().setPosition({pimpl_->window.size().width() / 2,
+                                  pimpl_->window.size().height() / 2});
+      sprites.back().setMoveHeading(rand());
+      ++spriteCount;
+    }
+
+    // Move & draw sprites
+    const double moveSpeed = 650.0f * ((double)timeDelta / SDL_NS_PER_SECOND);
+    for (auto &s : sprites) {
+      s.setMoveSpeed(moveSpeed);
+      int x = s.getPosition().x();
+      int y = s.getPosition().y();
+      if (x < 0 || x > pimpl_->window.size().width()) s.bounceHorizontal();
+      if (y < 0 || y > pimpl_->window.size().height()) s.bounceVertical();
+      s.move();
+      s.draw();
+    }
 
     // ImGUI demo
     if (show_demo_window) ImGui::ShowDemoWindow(&show_demo_window);
@@ -202,11 +219,10 @@ RENITY_API int Application::run() {
       ImGui::Begin("Hello, world!");  // Create a window called "Hello, world!"
                                       // and append into it.
 
-      ImGui::Text("This is some useful text.");
+      ImGui::Text("Rendering %llu sprites.", spriteCount);
       ImGui::Checkbox(
           "Demo Window",
           &show_demo_window);  // Edit bools storing our window open/close state
-      ImGui::Checkbox("Another Window", &show_another_window);
 
       ImGui::SliderFloat(
           "float", &f, 0.0f,
@@ -223,18 +239,6 @@ RENITY_API int Application::run() {
 
       ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / fps,
                   fps);
-      ImGui::End();
-    }
-
-    // 3. Show another simple window.
-    if (show_another_window) {
-      ImGui::Begin(
-          "Another Window",
-          &show_another_window);  // Pass a pointer to our bool variable (the
-                                  // window will have a closing button that will
-                                  // clear the bool when clicked)
-      ImGui::Text("Hello from another window!");
-      if (ImGui::Button("Close Me")) show_another_window = false;
       ImGui::End();
     }
 
