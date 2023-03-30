@@ -17,7 +17,6 @@
 #include "3rdparty/dmon/dmon.h"
 #endif
 #include "3rdparty/imgui/imgui.h"
-#include "Dictionary.h"
 #include "ResourceManager.h"
 #include "Sprite.h"
 #include "config.h"
@@ -33,6 +32,7 @@ struct Application::Impl {
   }
 
   Window window;
+  ResourceManager resMgr;
   SDL_Renderer *renderer;
   const char *executableName;
   bool headless;
@@ -40,7 +40,7 @@ struct Application::Impl {
 
 RENITY_API Application::Application(int argc, char *argv[]) {
   // TODO: Command-line flags parsing
-  pimpl_ = new Impl(argv[0]);
+  pimpl_ = new Impl(argv ? argv[0] : nullptr);
 
 #ifdef RENITY_DEBUG
   SDL_LogSetAllPriority(SDL_LOG_PRIORITY_DEBUG);
@@ -101,6 +101,7 @@ RENITY_API bool Application::initialize(bool headless) {
     return false;
   }
   // PHYSFS_setRoot(PHYSFS_getBaseDir(), "/assets");
+  pimpl_->resMgr.activate();
 
   // Log final search paths in debug mode
 #ifdef RENITY_DEBUG
@@ -141,22 +142,6 @@ RENITY_API bool Application::initialize(bool headless) {
     }
     pimpl_->renderer = pimpl_->window.getRenderer();
   }
-
-  // TEST: Dictionary
-  DictionaryPtr config =
-      ResourceManager::getActive()->get<Dictionary>("config.cbor");
-  config->put<bool>("stuff", true);
-  SDL_Log("config.cbor[foo]: %s\n", config->keep<const char *>("foo", "bar"));
-  config->put<Sint8>("thing", -42);
-  config->keep<const char *>("bar.woof.foo", "xyzzy");
-  config->put<const char *>("bar.woof.baz", "abcd");
-  config->saveJSON("config.json");
-  config = ResourceManager::getActive()->get<Dictionary>("config.json");
-  SDL_Log("config.json[thing]: %u\n", config->keep<Uint16>("thing", 1));
-  SDL_Log("config.json[bar.woof.baz]: %s\n",
-          config->keep<const char *>("bar.woof.baz", "arf"));
-  SDL_Log("config.json[bar.woof.foo]: %s\n",
-          config->keep<const char *>("bar.woof.foo", "arf"));
 
   return true;
 }

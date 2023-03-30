@@ -71,7 +71,7 @@ struct ResourceManager::Impl {
 
 RENITY_API ResourceManager::ResourceManager() {
   pimpl_ = new Impl();
-  activate();
+  if (!currentManager) currentManager = this;
 }
 
 RENITY_API ResourceManager::~ResourceManager() {
@@ -81,10 +81,11 @@ RENITY_API ResourceManager::~ResourceManager() {
   }
 #endif
   clear();
+  if (currentManager == this) currentManager = nullptr;
   delete this->pimpl_;
 }
 
-void ResourceManager::activate() {
+RENITY_API void ResourceManager::activate() {
 #ifdef RENITY_DEBUG
   if (pimpl_->watchId.id == 0) {
     const char *baseDir = PHYSFS_getBaseDir();
@@ -101,7 +102,7 @@ void ResourceManager::activate() {
   currentManager = this;
 }
 
-void ResourceManager::clear() {
+RENITY_API void ResourceManager::clear() {
   if (currentManager == this) {
     currentManager = nullptr;
   }
