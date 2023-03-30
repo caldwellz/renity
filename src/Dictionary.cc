@@ -126,9 +126,9 @@ RENITY_API size_t Dictionary::select(const char *path, bool autoCreate,
                "Dictionary::select: %lu deep before selecting '%s'.\n",
                duk_get_top(pimpl_->ctx) - 1, path);
 
-  // Short-circuit if an edge value is already selected -
-  // caller needs to unwind or replace it with an object first
-  if (!duk_is_object(pimpl_->ctx, -1)) return 0;
+  // Short-circuit on invalid path or if an edge value is already selected -
+  // caller needs to unwind or otherwise handle this themselves.
+  if (!path || !duk_is_object(pimpl_->ctx, -1)) return 0;
 
   const char separator = '.';
   String key(path);
@@ -223,6 +223,176 @@ RENITY_API void Dictionary::unwind(size_t depth) {
   }
 }
 
+RENITY_API Uint32 Dictionary::begin(const char *key) {
+  Uint32 index = 0;
+  size_t depth = select(key, false, true);
+  if (!duk_is_array(pimpl_->ctx, -1)) {
+    SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
+                 "Dictionary::begin: Selection is not an Array\n");
+    index = UINT32_MAX;
+  }
+  unwind(depth);
+  return index;
+}
+
+RENITY_API Uint32 Dictionary::end(const char *key) {
+  Uint32 index = UINT32_MAX;
+  size_t depth = select(key, false, true);
+  if (duk_is_array(pimpl_->ctx, -1)) {
+    index = duk_get_length(pimpl_->ctx, -1);
+  } else {
+    SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
+                 "Dictionary::end: Selection is not an Array\n");
+  }
+  unwind(depth);
+  return index;
+}
+
+RENITY_API Uint32 Dictionary::enumerate(
+    const char *path,
+    const FuncPtr<bool(Dictionary &, const String &)> &callback) {
+  Uint32 props = 0;
+  const size_t selectDepth = select(path, false, true);
+  if ((path && !selectDepth) || !duk_is_object(pimpl_->ctx, -1)) {
+    SDL_LogError(
+        SDL_LOG_CATEGORY_APPLICATION,
+        "Dictionary::enumerate: Could not enumerate a non-object in '%s'.\n",
+        path ? path : "(current selection)");
+    unwind(selectDepth);
+    return 0;
+  }
+
+  duk_require_stack(pimpl_->ctx, 3);
+  duk_enum(pimpl_->ctx, -1, DUK_ENUM_OWN_PROPERTIES_ONLY);
+
+  // Move the current selection in front of the enumerator so the cb can use it
+  duk_pull(pimpl_->ctx, -2);
+
+  // Save initial depth to check/unwind the stack after each callback
+  const size_t enumDepth = duk_get_top(pimpl_->ctx);
+
+  bool keepGoing = true;
+  while (keepGoing && duk_next(pimpl_->ctx, -2, 0)) {
+    // Copy the key and replace it with the value, effectively doing a select()
+    String key(duk_get_string(pimpl_->ctx, -1));
+    duk_get_prop(pimpl_->ctx, -2);
+
+    // TODO: Make the JSON encoder leave empty array slots empty, NOT null
+    if (duk_is_null_or_undefined(pimpl_->ctx, -1)) {
+      duk_pop(pimpl_->ctx);
+      continue;
+    }
+    keepGoing = callback(*this, key);
+    ++props;
+
+    // Bail out if the callback was naughty and unwound past its starting point
+    const size_t currentTop = duk_get_top(pimpl_->ctx);
+    if (currentTop < enumDepth) {
+      SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                  "Dictionary::enumerate: Callback unwound past :%lu to :%lu - "
+                  "cancelling enumeration.\n",
+                  enumDepth - 1, currentTop - 1);
+
+      // Unwind the enumeration and initial select() as needed
+      const size_t origTop = enumDepth - selectDepth - 1;
+      if (currentTop > origTop) {
+        duk_set_top(pimpl_->ctx, origTop);
+      }
+      return props;
+    }
+
+    // Unwind to the path selection, cleaning up whatever was added to the stack
+    duk_set_top(pimpl_->ctx, enumDepth);
+  }
+
+  // Remove the enumerator, leaving the existing selection on top if used
+  if (selectDepth) {
+    unwind(selectDepth + 1);
+  } else {
+    duk_remove(pimpl_->ctx, -2);
+  }
+
+  SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
+               "Dictionary::enumerate: Finished after %lu props with %li -> "
+               "%li stack change.\n",
+               props, (Sint32)enumDepth - selectDepth - 2,
+               (Sint32)duk_get_top(pimpl_->ctx) - 1);
+  return props;
+}
+
+RENITY_API Uint32 Dictionary::enumerateArray(
+    const char *path,
+    const FuncPtr<bool(Dictionary &, const Uint32 &)> &callback) {
+  Uint32 props = 0;
+  const size_t selectDepth = select(path, false, true);
+  if ((path && !selectDepth) || !duk_is_array(pimpl_->ctx, -1)) {
+    SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                 "Dictionary::enumerateArray: Could not enumerate a non-array "
+                 "in '%s'.\n",
+                 path ? path : "(current selection)");
+    unwind(selectDepth);
+    return 0;
+  }
+
+  duk_require_stack(pimpl_->ctx, 3);
+  duk_enum(pimpl_->ctx, -1,
+           DUK_ENUM_OWN_PROPERTIES_ONLY | DUK_ENUM_ARRAY_INDICES_ONLY);
+
+  // Move the current selection in front of the enumerator so the cb can use it
+  duk_pull(pimpl_->ctx, -2);
+
+  // Save initial depth to check/unwind the stack after each callback
+  const size_t enumDepth = duk_get_top(pimpl_->ctx);
+
+  bool keepGoing = true;
+  while (keepGoing && duk_next(pimpl_->ctx, -2, 0)) {
+    // Copy the key and replace it with the value, effectively doing a select()
+    Uint32 key = duk_to_uint(pimpl_->ctx, -1);
+    duk_get_prop(pimpl_->ctx, -2);
+
+    // TODO: Make the JSON encoder leave empty array slots empty, NOT null
+    if (duk_is_null_or_undefined(pimpl_->ctx, -1)) {
+      duk_pop(pimpl_->ctx);
+      continue;
+    }
+    keepGoing = callback(*this, key);
+    ++props;
+
+    // Bail out if the callback was naughty and unwound past its starting point
+    const size_t currentTop = duk_get_top(pimpl_->ctx);
+    if (currentTop < enumDepth) {
+      SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                  "Dictionary::enumerateArray: Callback unwound past :%lu to "
+                  ":%lu - cancelling enumeration.\n",
+                  enumDepth - 1, currentTop - 1);
+
+      // Unwind the enumeration and initial select() as needed
+      const size_t origTop = enumDepth - selectDepth - 1;
+      if (currentTop > origTop) {
+        duk_set_top(pimpl_->ctx, origTop);
+      }
+      return props;
+    }
+
+    // Unwind to the path selection, cleaning up whatever was added to the stack
+    duk_set_top(pimpl_->ctx, enumDepth);
+  }
+
+  // Remove the enumerator, leaving the existing selection on top if used
+  if (selectDepth) {
+    unwind(selectDepth + 1);
+  } else {
+    duk_remove(pimpl_->ctx, -2);
+  }
+
+  SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
+               "Dictionary::enumerateArray: Finished after %lu props with %li "
+               "-> %li stack change.\n",
+               props, (Sint32)enumDepth - selectDepth - 2,
+               (Sint32)duk_get_top(pimpl_->ctx) - 1);
+  return props;
+}
+
 RENITY_API bool Dictionary::putArray(const char *key) {
   size_t depth = select(key, true, false);
   if (!depth) {
@@ -263,7 +433,7 @@ RENITY_API bool Dictionary::putObject(const char *key) {
   template <>                                                                \
   RENITY_API bool Dictionary::get<T>(const char *key, T *valOut) {           \
     size_t depth = select(key, false, true);                                 \
-    if (!depth || !duk_is_##dukInt(pimpl_->ctx, -1)) {                       \
+    if (!duk_is_##dukInt(pimpl_->ctx, -1)) {                                 \
       SDL_LogDebug(                                                          \
           SDL_LOG_CATEGORY_APPLICATION,                                      \
           "Dictionary::get: Key or correct-type value not found for '%s'\n", \

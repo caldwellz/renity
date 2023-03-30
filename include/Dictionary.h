@@ -59,8 +59,45 @@ class RENITY_API Dictionary : public Resource {
    */
   void unwind(size_t depth = SIZE_MAX);
 
+  /** Get the beginning index of the given array.
+   * @param key What to enumerate. Defaults to the current selection.
+   * @return The beginning index, or UINT32_MAX if the indices aren't
+   * enumerable.
+   */
+  Uint32 begin(const char *key = nullptr);
+
+  /** Get the one-past-the-end index of the given array.
+   * @param key What to enumerate. Defaults to the current selection.
+   * @return The ending index, or UINT32_MAX if the indices aren't enumerable.
+   */
+  Uint32 end(const char *key = nullptr);
+
+  /** Enumerate an object or array using a callback.
+   * @param path A path to enumerate.
+   * Can be a nullptr to use the currently-selected path.
+   * @param callback Called for each enumeration with the key as a string.
+   * It should return true to continue enumerating, or false otherwise. Any
+   * select()s done in-callback are automatically unwound after each invocation.
+   * @return The number of properties enumerated, if any.
+   */
+  Uint32 enumerate(const char *path,
+                   const FuncPtr<bool(Dictionary &, const String &)> &callback);
+
+  /** Enumerate an array using a callback.
+   * @param path A path to enumerate.
+   * Can be a nullptr to use the currently-selected path.
+   * @param callback Called for each enumeration with the index as a unsigned
+   * int. It should return true to continue enumerating, or false otherwise. Any
+   * select()s done in-callback are automatically unwound after each invocation.
+   * @return The number of properties enumerated, if any.
+   */
+  Uint32 enumerateArray(
+      const char *path,
+      const FuncPtr<bool(Dictionary &, const Uint32 &)> &callback);
+
   /** Get a Property value of the given type if it exists.
    * @param key A key to attempt to get the value of.
+   * Can be a nullptr to use the currently-selected path.
    * @param valOut Where to store the value, if found. Can be a nullptr.
    * @return True if the value exists, false otherwise.
    */

@@ -20,6 +20,7 @@
 #ifdef __cplusplus
 #ifdef RENITY_USE_STL
 // PORTABILITY NOTE: Some features require RTTI and at least C++11
+#include <functional>
 #include <memory>
 #include <string>
 #include <type_traits>
@@ -47,6 +48,7 @@ using typeHash = typeid(T).hash_code;
 #define staticPointerCast std::static_pointer_cast
 #define makeSharedPtr std::make_shared
 #define typeHash(T) typeid(T).hash_code()
+#define FuncPtr std::function
 
 template <class T, class D = std::default_delete<T>>
 using UniquePtr = std::unique_ptr<T, D>;

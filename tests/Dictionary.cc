@@ -29,6 +29,7 @@ int main(int argc, char *argv[]) {
   assert(config->push<const char *>("valA"));  // ["0"] -> object length==0
   assert(config->put<float>("thing", 42.1234));
   config->keep<const char *>("bar.woof.foo", "xyzzy");
+  config->keep<const char *>("bar.woof.otherThing", "abcd");
   assert(config->push<const char *>("valB"));  // ["0"] -> object length==0
   assert(config->putArray("bar.woof.baz"));
   assert(config->select("bar.woof.baz") == 3);
@@ -43,8 +44,10 @@ int main(int argc, char *argv[]) {
   assert(config->put<const char *>("subB.bar", "baz"));
   config->unwind(1);
   assert(config->put<const char *>("7.subC.baz", "woof"));
+  assert(config->push<const char *>("theEnd"));
   config->unwind(2);
   assert(config->putArray("woof.baz"));
+  config->unwind();
 
   // Save, reload, and check JSON file
   assert(config->saveJSON("config.json"));
@@ -65,6 +68,42 @@ int main(int argc, char *argv[]) {
   config->unwind();
   SDL_Log("config.json[bar.woof.baz.5]: %s\n",
           config->keep<const char *>("bar.woof.baz.5", "arf"));
+
+  // Enumeration tests
+  assert(config->select("bar.woof") == 2);
+  assert(config->begin() == UINT32_MAX && config->end() == UINT32_MAX);
+  Uint32 objProps =
+      config->enumerate(nullptr, [](Dictionary &dict, const String &key) {
+        const char *val;
+        if (dict.get<const char *>(nullptr, &val)) {
+          SDL_Log("bar.woof['%s']: '%s'\n", key.c_str(), val);
+        } else {
+          SDL_Log("bar.woof['%s']: Not a string\n", key.c_str());
+        }
+        return true;
+      });
+  assert(objProps == 3);
+  assert(config->select("baz") == 1);
+  SDL_Log("bar.woof.baz -> %lu - %lu elements\n", config->end(),
+          config->begin());
+  Uint32 innerProps = 0;
+  Uint32 outerProps = config->enumerateArray(
+      nullptr, [&](Dictionary &dict, const Uint32 &index) {
+        ++innerProps;
+        const char *val;
+        if (dict.get<const char *>(nullptr, &val)) {
+          SDL_Log("bar.woof.baz[%lu]: '%s'\n", index, val);
+        } else {
+          dict.select("subB");
+          if (dict.get<const char *>("bar", &val)) {
+            SDL_Log("bar.woof.baz[%lu].subB.bar: '%s'\n", index, val);
+          } else {
+            SDL_Log("bar.woof.baz[%lu].subB.bar: **Not a string**\n", index);
+          }
+        }
+        return true;
+      });
+  assert(innerProps == 6 && outerProps == 6);
 
   app.destroy();
   return 0;
