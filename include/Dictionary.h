@@ -21,19 +21,23 @@ class RENITY_API Dictionary : public Resource {
 
   void load(SDL_RWops *src);
 
-  /** Save the Dictionary contents to a JSON file.
+  /** Save Dictionary contents to a JSON file.
    * @param destPath Destination file path. Contents will always be written as
    * JSON, regardless of file extension.
+   * @param selectionOnly Whether to save just the current selection, or the
+   * entire Dictionary.
    * @return True if the operation succeeded, false otherwise.
    */
-  bool saveJSON(const char *destPath);
+  bool saveJSON(const char *destPath, bool selectionOnly = false);
 
-  /** Save the Dictionary contents to a CBOR file.
+  /** Save Dictionary contents to a CBOR file.
    * @param destPath Destination file path. Contents will always be written as
    * CBOR, regardless of file extension.
+   * @param selectionOnly Whether to save just the current selection, or the
+   * entire Dictionary.
    * @return True if the operation succeeded, false otherwise.
    */
-  bool saveCBOR(const char *destPath);
+  bool saveCBOR(const char *destPath, bool selectionOnly = false);
 
   /** Select a relative path into the Dictionary.
    * Further operations, e.g. get() and put(), will use this as a prefix.
@@ -178,6 +182,7 @@ class RENITY_API Dictionary : public Resource {
   }
 
  protected:
+  void *getContext();
   size_t select(const char *path, bool autoCreate, bool loadValue);
 
  private:

@@ -21,6 +21,8 @@ struct Dictionary::Impl {
   Impl() {
     ctx = duk_create_heap_default();
     duk_push_bare_object(ctx);
+    duk_set_global_object(ctx);
+    duk_push_global_object(ctx);
   }
 
   ~Impl() {
@@ -51,6 +53,8 @@ RENITY_API void Dictionary::load(SDL_RWops *src) {
     SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
                  "Dictionary::load: Invalid RWops (%li).\n", bufSize);
     duk_push_bare_object(pimpl_->ctx);
+    duk_set_global_object(pimpl_->ctx);
+    duk_push_global_object(pimpl_->ctx);
     return;
   }
 
@@ -92,12 +96,27 @@ RENITY_API void Dictionary::load(SDL_RWops *src) {
     duk_require_stack(pimpl_->ctx, 1);
     duk_push_bare_object(pimpl_->ctx);
   }
+
+  duk_set_global_object(pimpl_->ctx);
+  duk_push_global_object(pimpl_->ctx);
 }
 
-RENITY_API bool Dictionary::saveJSON(const char *destPath) {
-  // Encoders replace the stack top in-place with the encoded value,
-  // so we have to duplicate the root, encode it, and then discard the encoding.
-  duk_dup(pimpl_->ctx, 0);
+RENITY_API bool Dictionary::saveJSON(const char *destPath, bool selectionOnly) {
+  // Encoders replace the stack top in-place with the encoded value, so we
+  // have to duplicate something, encode it, and then discard the encoding.
+  duk_require_stack(pimpl_->ctx, 1);
+  if (selectionOnly) {
+    if (!duk_is_object(pimpl_->ctx, -1)) {
+      SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                   "Dictionary::saveJSON: Tried to save a non-object/non-array "
+                   "to '%s'.\n",
+                   destPath);
+      return false;
+    }
+    duk_dup_top(pimpl_->ctx);
+  } else {
+    duk_push_global_object(pimpl_->ctx);
+  }
   const char *buf = duk_json_encode(pimpl_->ctx, -1);
   Uint32 bufLen = SDL_strlen(buf);
   bool success =
@@ -106,10 +125,22 @@ RENITY_API bool Dictionary::saveJSON(const char *destPath) {
   return success;
 }
 
-RENITY_API bool Dictionary::saveCBOR(const char *destPath) {
-  // Encoders replace the stack top in-place with the encoded value,
-  // so we have to duplicate the obj, encode it, and then discard the encoding.
-  duk_dup(pimpl_->ctx, 0);
+RENITY_API bool Dictionary::saveCBOR(const char *destPath, bool selectionOnly) {
+  // Encoders replace the stack top in-place with the encoded value, so we
+  // have to duplicate something, encode it, and then discard the encoding.
+  duk_require_stack(pimpl_->ctx, 1);
+  if (selectionOnly) {
+    if (!duk_is_object(pimpl_->ctx, -1)) {
+      SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                   "Dictionary::saveCBOR: Tried to save a non-object/non-array "
+                   "to '%s'.\n",
+                   destPath);
+      return false;
+    }
+    duk_dup_top(pimpl_->ctx);
+  } else {
+    duk_push_global_object(pimpl_->ctx);
+  }
   duk_cbor_encode(pimpl_->ctx, -1, 0);
   duk_size_t bufLen;
   const Uint8 *buf =
@@ -325,11 +356,12 @@ RENITY_API Uint32 Dictionary::enumerateArray(
     const FuncPtr<bool(Dictionary &, const Uint32 &)> &callback) {
   Uint32 props = 0;
   const size_t selectDepth = select(path, false, true);
-  if ((path && !selectDepth) || !duk_is_array(pimpl_->ctx, -1)) {
-    SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                 "Dictionary::enumerateArray: Could not enumerate a non-array "
-                 "in '%s'.\n",
-                 path ? path : "(current selection)");
+  if ((path && !selectDepth) || !duk_is_object(pimpl_->ctx, -1)) {
+    SDL_LogError(
+        SDL_LOG_CATEGORY_APPLICATION,
+        "Dictionary::enumerateArray: Could not enumerate a non-indexable "
+        "in '%s'.\n",
+        path ? path : "(current selection)");
     unwind(selectDepth);
     return 0;
   }
@@ -429,6 +461,9 @@ RENITY_API bool Dictionary::putObject(const char *key) {
   return !!depth;
 }
 */
+
+RENITY_API void *Dictionary::getContext() { return pimpl_->ctx; }
+
 #define DICT_IMPL_BASE(T, dukExt, dukInt, printSpec, printAdd)               \
   template <>                                                                \
   RENITY_API bool Dictionary::get<T>(const char *key, T *valOut) {           \
