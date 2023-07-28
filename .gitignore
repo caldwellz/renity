@@ -1,6 +1,7 @@
 # Build and generated documentation directories
-*build*
 docs/html
+*build*
+!meson.build
 
 # Local editor settings
 .vscode/settings.json
