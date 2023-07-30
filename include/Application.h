@@ -11,11 +11,11 @@
 #ifndef RENITY_APPLICATION_H_
 #define RENITY_APPLICATION_H_
 
-#include <SDL3/SDL_render.h>
-
-#include "Window.h"
+#include "types.h"
 
 namespace renity {
+class Window;
+
 /** Encapsulates a game application. */
 class RENITY_API Application {
  public:

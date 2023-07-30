@@ -1,0 +1,5 @@
+version 3.0 es
+
+# We'll probably want this from the desktop OpenGL spec if we add a desktop fallback
+#extraspec https://raw.githubusercontent.com/KhronosGroup/OpenGL-Registry/main/xml/gl.xml
+#extension GL_ARB_ES3_compatibility optional

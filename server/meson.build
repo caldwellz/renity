@@ -27,4 +27,5 @@ server_target = executable(
   , install : true
   , c_args : server_args
   , cpp_args : server_args
+  , win_subsystem: 'console'
 )

@@ -28,15 +28,21 @@ endif
 
 # - C math library (usually only needed on Linux)
 dep_m = cppcomp.find_library('m', required : false)
-lib_deps = [dep_sdl, dep_sdlimage, dep_physfs, dep_m]
+lib_deps = [
+  dep_sdl
+, dep_sdlimage
+, dep_physfs
+, dep_m
+]
 
 # List sources and process subdirectories - version file comes later
 lib_srcs = files([
   'Application.cc'
 , 'Dictionary.cc'
+#, 'EntityManager.cc'
 , 'ResourceManager.cc'
-, 'Sprite.cc'
-, 'Texture.cc'
+#, 'Sprite.cc'
+#, 'Texture.cc'
 , 'Window.cc'
 ])
 subdir('3rdparty')

@@ -7,3 +7,11 @@
 [submodule "src/3rdparty/incbin"]
 	path = src/3rdparty/incbin
 	url = https://github.com/graphitemaster/incbin.git
+[submodule "src/3rdparty/EGL-Registry"]
+	path = src/3rdparty/EGL-Registry
+	url = https://github.com/KhronosGroup/EGL-Registry
+	branch = main
+[submodule "src/3rdparty/flextgl"]
+	path = src/3rdparty/flextgl
+	url = https://github.com/mosra/flextgl.git
+	branch = master

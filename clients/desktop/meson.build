@@ -27,4 +27,5 @@ client_desktop_target = executable(
   , install : true
   , c_args : client_desktop_args
   , cpp_args : client_desktop_args
+  , win_subsystem: 'windows'
 )

@@ -18,7 +18,8 @@
 #endif
 #include "3rdparty/imgui/imgui.h"
 #include "ResourceManager.h"
-#include "Sprite.h"
+#include "Window.h"
+// #include "Sprite.h"
 #include "config.h"
 #include "types.h"
 #include "version.h"
@@ -26,14 +27,14 @@
 namespace renity {
 struct Application::Impl {
   Impl(const char *argv0) {
-    renderer = nullptr;
+    context = nullptr;
     executableName = argv0;
     headless = false;
   }
 
   Window window;
   ResourceManager resMgr;
-  SDL_Renderer *renderer;
+  SDL_GLContext context;
   const char *executableName;
   bool headless;
 };
@@ -43,7 +44,10 @@ RENITY_API Application::Application(int argc, char *argv[]) {
   pimpl_ = new Impl(argv ? argv[0] : nullptr);
 
 #ifdef RENITY_DEBUG
+  // Redirect logs to a file
+  // freopen("stderr.txt", "w", stderr);
   SDL_LogSetAllPriority(SDL_LOG_PRIORITY_DEBUG);
+  dmon_init();
 #else
   SDL_LogSetAllPriority(SDL_LOG_PRIORITY_WARN);
   SDL_LogSetPriority(SDL_LOG_CATEGORY_APPLICATION, SDL_LOG_PRIORITY_INFO);
@@ -51,6 +55,9 @@ RENITY_API Application::Application(int argc, char *argv[]) {
 }
 
 RENITY_API Application::~Application() {
+#ifdef RENITY_DEBUG
+  dmon_deinit();
+#endif
   this->destroy();
   delete this->pimpl_;
 }
@@ -75,7 +82,6 @@ RENITY_API bool Application::initialize(bool headless) {
       "PhysFS versions: %d.%d.%d (compiled against) vs %d.%d.%d (linked).\n",
       compiled.major, compiled.minor, compiled.patch, linked.major,
       linked.minor, linked.patch);
-  dmon_init();
 #endif
 
   // Set up PhysFS
@@ -132,15 +138,16 @@ RENITY_API bool Application::initialize(bool headless) {
     if (bounds.w <= 1366 || bounds.h <= 768) {
       pimpl_->window.useFullscreen(true, true);
     } else {
-      bounds.w *= 0.75;
-      bounds.h *= 0.75;
+      // Use 75% of the screen, but without float conversions
+      bounds.w = (bounds.w / 4) * 3;
+      bounds.h = (bounds.h / 4) * 3;
       pimpl_->window.useFullscreen(false, true);
     }
     pimpl_->window.size(renity::Dimension2Di(bounds.w, bounds.h));
     if (!pimpl_->window.open()) {
       return false;
     }
-    pimpl_->renderer = pimpl_->window.getRenderer();
+    pimpl_->context = pimpl_->window.getGlContext();
   }
 
   return true;
@@ -149,15 +156,17 @@ RENITY_API bool Application::initialize(bool headless) {
 RENITY_API int Application::run() {
   SDL_Event event;
   bool keepGoing = true;
-  bool show_demo_window;
+  bool show_demo_window = true;
   Uint32 frames = 0;
   Uint64 lastFrameTime = SDL_GetTicksNS();
   Uint64 fpsTime = 0;
   float fps = 1.0f;
-  Vector<Sprite> sprites;
+  // Vector<Sprite> sprites;
   Uint64 spriteCount = 0;
-  srand(SDL_GetTicksNS());
-  // SDL_SetRenderVSync(pimpl_->renderer, 0);
+  srand((Uint32)SDL_GetTicksNS());
+  getWindow()->vsync(false);
+  getWindow()->clearColor({0, 0, 200, 255});
+
   while (keepGoing) {
     // Recalculate displayed FPS every second
     const Uint64 timeDelta = SDL_GetTicksNS() - lastFrameTime;
@@ -172,6 +181,7 @@ RENITY_API int Application::run() {
 
     // Add more sprites until we start dropping frames
     // const double realtimeFPS = (double)SDL_NS_PER_SECOND / timeDelta;
+    /*
     if (spriteCount < 10) {  // realtimeFPS > 59.9999) {
       sprites.emplace_back("epic.png");
       sprites.back().setPosition({pimpl_->window.size().width() / 2,
@@ -191,7 +201,7 @@ RENITY_API int Application::run() {
       s.move();
       s.draw();
     }
-
+    */
     // ImGUI demo
     if (show_demo_window) ImGui::ShowDemoWindow(&show_demo_window);
 
@@ -252,9 +262,6 @@ RENITY_API int Application::run() {
 }
 
 RENITY_API void Application::destroy() {
-#ifdef RENITY_DEBUG
-  dmon_deinit();
-#endif
   pimpl_->window.close();
   SDL_Quit();
   PHYSFS_deinit();
