@@ -1,4 +1,5 @@
 option('PUBLISHER_NAME', type : 'string', value : 'Renity Publisher', description : 'Publisher name')
+option('PRODUCT_NAME', type : 'string', value : 'Renity', description : 'Product/application name')
 option('PRODUCT_DESCRIPTION', type : 'string', value : '', description : 'Product/application description')
 option('RENITY_BUILD_DOCS', type : 'boolean', value : true)
 option('RENITY_BUILD_TESTS', type : 'boolean', value : true)

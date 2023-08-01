@@ -19,6 +19,7 @@
 #include "config.h"
 #include "gl3.h"
 #include "types.h"
+#include "version.h"
 
 namespace renity {
 Window *currentWindow = nullptr;
@@ -29,7 +30,7 @@ struct Window::Impl {
     guiCtx = nullptr;
     clearColor = {0, 0, 0, 255};
     guiClearColor = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
-    title = "Renity Window";
+    title = PRODUCT_NAME;
     position = Point2Di32(SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
     size = Dimension2Di32(1, 1);
     fullscreen = false;

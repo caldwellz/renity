@@ -19,6 +19,7 @@ extern "C" {
 #endif  //__cplusplus
 extern RENITY_API const char *PUBLISHER_NAME;
 extern RENITY_API const char *PRODUCT_NAME;
+extern RENITY_API const char *ENGINE_NAME;
 extern RENITY_API const char *PRODUCT_DESCRIPTION;
 extern RENITY_API const char *PRODUCT_VERSION_STR;
 extern RENITY_API const short PRODUCT_VERSION_MAJOR;

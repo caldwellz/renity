@@ -11,7 +11,8 @@
 #include "version.h"
 
 const char* PUBLISHER_NAME = "@publisher@";
-const char* PRODUCT_NAME = "@name@";
+const char* PRODUCT_NAME = "@product_name@";
+const char* ENGINE_NAME = "@engine_name@";
 const char* PRODUCT_DESCRIPTION = "@description@";
 const char* PRODUCT_VERSION_STR = "@version@";
 const short PRODUCT_VERSION_MAJOR = @version_major@;

@@ -69,8 +69,9 @@ endif
 # Configure version file
 version_data = configuration_data()
 version_data.set('publisher', get_option('PUBLISHER_NAME'))
+version_data.set('product_name', get_option('PRODUCT_NAME'))
+version_data.set('engine_name', meson.project_name())
 version_data.set('description', get_option('PRODUCT_DESCRIPTION'))
-version_data.set('name', meson.project_name())
 version_data.set('version', version_str)
 version_data.set('version_major', version_parts[0])
 version_data.set('version_minor', version_parts[1])
