@@ -15,6 +15,9 @@ lib_headers = [
     conffile
   , 'types.h'
   , 'version.h'
+  , 'Action.h'
+  , 'ActionHandler.h'
+  , 'ActionManager.h'
   , 'Dictionary.h'
   , 'Dimension2D.h'
   , 'HashTable.h'
@@ -23,7 +26,7 @@ lib_headers = [
   , 'Resource.h'
   , 'ResourceManager.h'
   , 'Sprite.h'
-  , 'Texture.h'
+#  , 'Texture.h'
   , 'Window.h'
 ]
 

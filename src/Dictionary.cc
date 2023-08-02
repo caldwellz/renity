@@ -528,7 +528,7 @@ RENITY_API void *Dictionary::getContext() { return pimpl_->ctx; }
   RENITY_API bool Dictionary::put<T>(const char *key, T val) {               \
     size_t depth = select(key, true, false);                                 \
     SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,                               \
-                 "Dictionary::put: '%s'(%u)=" printSpec "\n", key, depth,    \
+                 "Dictionary::put: '%s'(%lu)=" printSpec "\n", key, depth,   \
                  val printAdd);                                              \
     if (!depth) {                                                            \
       return false;                                                          \

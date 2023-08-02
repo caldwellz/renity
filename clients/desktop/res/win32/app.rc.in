@@ -17,11 +17,11 @@ FILESUBTYPE 0x0L
 		BLOCK "040904B0"
 		{
 			VALUE "FileDescription", "@description@"
-			VALUE "InternalName", "@name@.exe"
-			VALUE "OriginalFilename", "@name@.exe"
+			VALUE "InternalName", "@engine_name@.exe"
+			VALUE "OriginalFilename", "@engine_name@.exe"
 			VALUE "CompanyName", "@publisher@"
 			VALUE "LegalCopyright", "Copyright (C) @publisher@. All rights reserved."
-			VALUE "ProductName", "@name@"
+			VALUE "ProductName", "@product_name@"
 			VALUE "FileVersion", "@version@"
 			VALUE "ProductVersion", "@version@"
 		}

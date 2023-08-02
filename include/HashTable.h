@@ -16,6 +16,7 @@
 using namespace std;
 
 #include "types.h"
+#include "utils/id_helpers.h"
 
 namespace renity {
 /** Generic single-key hash table. Currently just glosses over a
@@ -23,8 +24,11 @@ namespace renity {
 template <typename Key, typename Val>
 class HashTable {
  public:
+  /** Check if an item exists in the table */
+  bool exists(Key k) { return map.find(getId(k)) != map.end(); }
+
   /** Get an item from the table, constructing a new one if it doesn't exist. */
-  Val &get(Key &k) {
+  Val &get(Key k) {
 #ifdef RENITY_DEBUG_VERBOSE
     cout << "HashTable::get '" << k << "' (key:";
     if (std::is_same<Key, const char *>::value) {
@@ -34,34 +38,25 @@ class HashTable {
     } else {
       cout << "[not a C str]";
     }
-    cout << ", hash:" << std::hex << mapHash(k) << ")" << endl;
+    cout << ", hash:" << std::hex << getId(k) << ")" << endl;
 #endif
-    return map[mapHash(k)];
+    return map[getId(k)];
   }
 
   /** Insert or overwrite an item in the table. */
-  void put(Key &k, Val &v) { map[mapHash(k)] = v; }
+  void put(Key k, Val v) { map[getId(k)] = v; }
 
   /** Remove an item from the table. */
-  void erase(Key &k) { map.erase(mapHash(k)); }
+  void erase(Key k) { map.erase(getId(k)); }
 
   /** Remove *all* items from the table. */
   void clear() { map.clear(); }
 
  private:
-  size_t mapHash(Key &k) {
-    // Have to convert C strings to C++ strings, otherwise it'll hash the ptr
-    if (std::is_same<Key, const char *>::value) {
-      String s(k);
-      return std::hash<String>{}(s);
-    }
-    return std::hash<Key>{}(k);
-  }
-  unordered_map<size_t, Val> map;
+  unordered_map<Id, Val> map;
 };
 
-/** Dual-key hash table. Currently just mashes two std::hash outputs together,
- * but will eventually use XXH3 with a uint-optimized table. */
+/** Dual-key hash table that currently just mashes two Id's together. */
 template <typename KeyA, typename KeyB, typename Val>
 class DualHashTable {
  public:
@@ -82,8 +77,8 @@ class DualHashTable {
 
  protected:
   Uint64 dualHash(KeyA &a, KeyB &b) {
-    Uint64 valA = std::hash<KeyA>{}(a);
-    Uint32 valB = std::hash<KeyB>{}(b);
+    Uint64 valA = (Uint64)getId(a);
+    Uint64 valB = (Uint64)getId(b);
     Uint64 res = valA << 32 | valB;
 #ifdef RENITY_DEBUG_VERBOSE
     cout << "dualHash: A='" << a << "' (" << std::hex << valA << "), B='" << b

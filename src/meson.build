@@ -37,7 +37,9 @@ lib_deps = [
 
 # List sources and process subdirectories - version file comes later
 lib_srcs = files([
-  'Application.cc'
+  'Action.cc'
+, 'ActionManager.cc'
+, 'Application.cc'
 , 'Dictionary.cc'
 #, 'EntityManager.cc'
 , 'ResourceManager.cc'

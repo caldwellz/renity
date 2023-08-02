@@ -17,11 +17,14 @@
 #include "3rdparty/dmon/dmon.h"
 #endif
 #include "3rdparty/imgui/imgui.h"
+#include "ActionHandler.h"
+#include "ActionManager.h"
 #include "ResourceManager.h"
 #include "Window.h"
 // #include "Sprite.h"
 #include "config.h"
 #include "types.h"
+#include "utils/id_helpers.h"
 #include "version.h"
 
 namespace renity {
@@ -33,21 +36,41 @@ struct Application::Impl {
   }
 
   Window window;
+  ActionManager actionMgr;
   ResourceManager resMgr;
   SDL_GLContext context;
   const char *executableName;
   bool headless;
 };
 
+#ifdef RENITY_DEBUG
+class ActionLogger : public ActionHandler {
+  void handleAction(const ActionCategoryId categoryId, const Action *action) {
+    SDL_LogDebug(
+        SDL_LOG_CATEGORY_APPLICATION,
+        "ActionLogger::handleAction: categoryId:0x%08x, "
+        "actionId:0x%08x, createdAt: %.1f secs, dataA:0x%08x, dataB:0x%08x",
+        categoryId, action->getId(), action->getCreatedAt() / 1000.0f,
+        action->getDataA(), action->getDataB());
+  }
+};
+#endif
+
 RENITY_API Application::Application(int argc, char *argv[]) {
   // TODO: Command-line flags parsing
   pimpl_ = new Impl(argv ? argv[0] : nullptr);
 
 #ifdef RENITY_DEBUG
-  // Redirect logs to a file
+  // Redirect logs to a file and turn on debug logs
   // freopen("stderr.txt", "w", stderr);
   SDL_LogSetAllPriority(SDL_LOG_PRIORITY_DEBUG);
+
+  // Watch for file changes
   dmon_init();
+
+  // Register an Action logger for various categories
+  ActionHandlerPtr actLogger(new ActionLogger);
+  pimpl_->actionMgr.subscribe(actLogger, getId("Window"));
 #else
   SDL_LogSetAllPriority(SDL_LOG_PRIORITY_WARN);
   SDL_LogSetPriority(SDL_LOG_CATEGORY_APPLICATION, SDL_LOG_PRIORITY_INFO);

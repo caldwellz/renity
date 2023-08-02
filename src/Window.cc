@@ -15,10 +15,13 @@
 #include "3rdparty/imgui/backends/imgui_impl_opengl3.h"
 #include "3rdparty/imgui/backends/imgui_impl_sdl3.h"
 #include "3rdparty/imgui/imgui.h"
+#include "Action.h"
+#include "ActionManager.h"
 #include "ResourceManager.h"
 #include "config.h"
 #include "gl3.h"
 #include "types.h"
+#include "utils/id_helpers.h"
 #include "version.h"
 
 namespace renity {
@@ -109,7 +112,7 @@ int windowEventProcessor(void *userdata, SDL_Event *event) {
                    "Window::windowEventProcessor: Window resized to %ix%i "
                    "actual pixels.\n",
                    event->window.data1, event->window.data2);
-      glViewport(0, 0, event->window.data1, event->window.data2);
+      // glViewport(0, 0, event->window.data1, event->window.data2);
       ImGui_ImplSDL3_ProcessEvent(event);
       break;
     // A bunch of event types that we know we don't currently care about
@@ -130,9 +133,15 @@ int windowEventProcessor(void *userdata, SDL_Event *event) {
     default:
       ImGui_ImplSDL3_ProcessEvent(event);
       SDL_LogDebug(SDL_LOG_CATEGORY_VIDEO,
-                   "Unhandled window event type %i on windowId %i.\n",
+                   "Window::windowEventProcessor: Unhandled window event type "
+                   "%i on windowId %i.",
                    event->window.type, event->window.windowID);
   }
+
+  // Forward current-window events on to the action queue
+  ActionManager::getActive()->post(Action(getSDLEventTypeActionId(event->type),
+                                          {w->getWindowID(), userdata}));
+
   return 0;
 }
 
@@ -271,6 +280,15 @@ RENITY_API bool Window::open() {
     return false;
   }
 
+  // Register window events under the "Window" action category
+  // Doesn't work right in the constructor, so we'll do it here
+  const ActionCategoryId catId = getId("Window");
+  for (Uint32 type = SDL_EVENT_WINDOW_FIRST; type <= SDL_EVENT_WINDOW_LAST;
+       ++type) {
+    ActionManager::getActive()->assignCategory(getSDLEventTypeActionId(type),
+                                               catId);
+  }
+
   // Watch for window events
   SDL_AddEventWatch(windowEventProcessor, this);
 
@@ -358,7 +376,8 @@ RENITY_API bool Window::update() {
                  SDL_GetError());
     return false;
   }
-  glClear(GL_COLOR_BUFFER_BIT);
+  // Only need to clear if we're not overwriting the screen on every frame
+  // glClear(GL_COLOR_BUFFER_BIT);
 
   // Start a new ImGui frame
   ImGui_ImplOpenGL3_NewFrame();

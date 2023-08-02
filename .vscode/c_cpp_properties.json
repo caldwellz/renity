@@ -10,13 +10,14 @@
                 "${workspaceFolder}/buildlin/include"
             ],
             "defines": [
+                "__cplusplus=201703L",
                 "BUILDING_RENITY",
                 "RENITY_DEBUG",
                 "RENITY_USE_STL"
             ],
             "compilerPath": "/usr/bin/gcc",
             "cStandard": "c11",
-            "cppStandard": "c++11",
+            "cppStandard": "c++17",
             "intelliSenseMode": "linux-gcc-x64",
             "compileCommands": "${workspaceFolder}/builddir/compile_commands.json"
         },
@@ -27,6 +28,7 @@
                 "${workspaceFolder}/src/3rdparty/imgui"
             ],
             "defines": [
+                "__cplusplus=201703L",
                 "BUILDING_RENITY",
                 "RENITY_DEBUG",
                 "RENITY_USE_STL",
@@ -37,7 +39,7 @@
             "windowsSdkVersion": "10.0.19041.0",
             "compilerPath": "C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.31.31103/bin/Hostx64/x64/clang-cl.exe",
             "intelliSenseMode": "windows-msvc-x64",
-            "cppStandard": "c++14",
+            "cppStandard": "c++17",
             "cStandard": "c11"
         }
     ],
