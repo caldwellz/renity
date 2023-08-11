@@ -9,11 +9,8 @@ if host_machine.system() == 'windows'
   apprcfile = configure_file(configuration : version_data
     , input : 'res/win32/app.rc.in'
     , output : 'app.rc')
-  icofile = configure_file(copy : true
-    , input : 'res/win32/app.ico'
-    , output : 'app.ico')
-  client_desktop_srcs += import('windows').compile_resources(apprcfile
-    , depend_files : [icofile])
+  icofile = import('fs').copyfile('res/win32/app.ico', 'app.ico')
+  client_desktop_srcs += import('windows').compile_resources(apprcfile, depends : [icofile])
 endif
 
 

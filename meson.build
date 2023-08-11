@@ -1,7 +1,7 @@
 project('renity', ['c', 'cpp']
   , version : '0.2.0'
   , license: 'MPL-2.0'
-  , meson_version : '>=0.56.0' # For win_subsystem
+  , meson_version : '>=0.64.0'
   , default_options : ['buildtype=debug', 'warning_level=3', 'cpp_eh=s', 'cpp_rtti=true', 'c_std=c11', 'cpp_std=c++17', 'prefix=/usr/local'])
 
 
