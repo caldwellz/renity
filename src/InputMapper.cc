@@ -125,10 +125,11 @@ struct InputMapper::Impl : public ActionHandler {
     const Uint32 maskedClicks = clicks & 0x0F;
 
     const Uint32 out = type << 16 | nonLockingMods << 4 | maskedClicks;
-    SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
-                 "InputMapper::getButtonHash: (0x%04x, 0x%04x, 0x%04x, 0x%02x) "
-                 "-> 0x%08x",
-                 source, btnOrKey, clicks, mods, out);
+    SDL_LogVerbose(
+        SDL_LOG_CATEGORY_INPUT,
+        "InputMapper::getButtonHash: (0x%04x, 0x%04x, 0x%04x, 0x%02x) "
+        "-> 0x%08x",
+        source, btnOrKey, clicks, mods, out);
     return out;
   }
 
@@ -150,10 +151,10 @@ struct InputMapper::Impl : public ActionHandler {
 
     // TODO: Find a use for 2nd byte
     const Uint32 out = type << 24 | axis;
-    SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
-                 "InputMapper::getAxisHash: (0x%02x, 0x%08x, 0x%04x) "
-                 "-> 0x%08x",
-                 source, instance, axis, out);
+    SDL_LogVerbose(SDL_LOG_CATEGORY_INPUT,
+                   "InputMapper::getAxisHash: (0x%02x, 0x%08x, 0x%04x) "
+                   "-> 0x%08x",
+                   source, instance, axis, out);
     return out;
   }
 
@@ -186,20 +187,20 @@ struct InputMapper::Impl : public ActionHandler {
         inputText = event->edit.text;
         ActionManager::getActive()->post(Action(
             textInput, {inputText, event->edit.start, event->edit.length}));
-        SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
-                     "InputMapper::handleKeyboardEvent: %s '%s' %i:%i",
-                     evtTypeName, event->edit.text, event->edit.start,
-                     event->edit.length);
+        SDL_LogVerbose(SDL_LOG_CATEGORY_INPUT,
+                       "InputMapper::handleKeyboardEvent: %s '%s' %i:%i",
+                       evtTypeName, event->edit.text, event->edit.start,
+                       event->edit.length);
         return 0;
       case SDL_EVENT_TEXT_EDITING_EXT:
         inputText = event->editExt.text;
         ActionManager::getActive()->post(
             Action(textInput,
                    {inputText, event->editExt.start, event->editExt.length}));
-        SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
-                     "InputMapper::handleKeyboardEvent: %s '%s' %i:%i",
-                     evtTypeName, event->editExt.text, event->editExt.start,
-                     event->editExt.length);
+        SDL_LogVerbose(SDL_LOG_CATEGORY_INPUT,
+                       "InputMapper::handleKeyboardEvent: %s '%s' %i:%i",
+                       evtTypeName, event->editExt.text, event->editExt.start,
+                       event->editExt.length);
         return 0;
         // case SDL_EVENT_KEYMAP_CHANGED:
       default:
@@ -213,11 +214,11 @@ struct InputMapper::Impl : public ActionHandler {
     const SDL_Keysym sym = event->key.keysym;
     const bool isPrintable = sym.sym >= 0x20 && sym.sym <= 0x7E;
     if (event->key.repeat) {
-      SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
-                   "InputMapper::handleKeyboardEvent: Ignoring repeat %i of "
-                   "non-text-input '%c' (%s, 0x%04x).",
-                   event->key.repeat, isPrintable ? sym.sym : ' ',
-                   SDL_GetKeyName(sym.sym), sym.scancode);
+      SDL_LogVerbose(SDL_LOG_CATEGORY_INPUT,
+                     "InputMapper::handleKeyboardEvent: Ignoring repeat %i of "
+                     "non-text-input '%c' (%s, 0x%04x).",
+                     event->key.repeat, isPrintable ? sym.sym : ' ',
+                     SDL_GetKeyName(sym.sym), sym.scancode);
       return 0;
     }
 
@@ -227,11 +228,12 @@ struct InputMapper::Impl : public ActionHandler {
       // TODO: Add a function/feature to translate input hash to GUI combo text
       Uint32 inputHash = getButtonHash(INPUT_KEYBOARD, (Uint16)sym.scancode, 1,
                                        (Uint16)SDL_GetModState());
-      SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
-                   "InputMapper::handleKeyboardEvent: No mapping for '%c' (%s, "
-                   "0x%04x) with 0x%04x mods (0x%08x hash).",
-                   isPrintable ? sym.sym : ' ', SDL_GetKeyName(sym.sym),
-                   sym.scancode, sym.mod, inputHash);
+      SDL_LogVerbose(
+          SDL_LOG_CATEGORY_INPUT,
+          "InputMapper::handleKeyboardEvent: No mapping for '%c' (%s, "
+          "0x%04x) with 0x%04x mods (0x%08x hash).",
+          isPrintable ? sym.sym : ' ', SDL_GetKeyName(sym.sym), sym.scancode,
+          sym.mod, inputHash);
       ActionManager::getActive()->post(
           Action(unmappedInput, {inputHash, pressed}));
       return 0;
@@ -253,7 +255,7 @@ struct InputMapper::Impl : public ActionHandler {
       ActionId actId = getButtonAction(INPUT_MOUSE_BTN, btn.button, btn.clicks);
       if (!actId) {
         // TODO: Add a function/feature to translate inputId to GUI combo text
-        SDL_LogDebug(
+        SDL_LogVerbose(
             SDL_LOG_CATEGORY_INPUT,
             "InputMapper::handleMouseEvent: No mapping for button 0x%02x.",
             btn.button);
@@ -302,10 +304,10 @@ struct InputMapper::Impl : public ActionHandler {
     ActionId actId = getAxisAction(INPUT_MOUSE_AXIS, instance, axis);
     if (!actId) {
       // TODO: Add a function/feature to translate inputId to GUI combo text
-      SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
-                   "InputMapper::handleMouseEvent: Unmapped axis 0x%04x on "
-                   "instance 0x%08x",
-                   axis, instance);
+      SDL_LogVerbose(SDL_LOG_CATEGORY_INPUT,
+                     "InputMapper::handleMouseEvent: Unmapped axis 0x%04x on "
+                     "instance 0x%08x",
+                     axis, instance);
       ActionManager::getActive()->post(
           Action(unmappedInput,
                  {getAxisHash(INPUT_MOUSE_AXIS, instance, axis), false}));
@@ -331,10 +333,11 @@ int inputEventProcessor(void *userdata, SDL_Event *event) {
 
   // Extract just the input group bits and distribute the event appropriately
   const Uint32 evtGroup = event->type & EVT_INPUT_GROUP_MASK;
-  SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
-               "InputMapper::inputEventProcessor: Processing input event type "
-               "%s (0x%04x) in group 0x%04x.",
-               getSDLEventTypeName(event->type), event->type, evtGroup);
+  SDL_LogVerbose(
+      SDL_LOG_CATEGORY_INPUT,
+      "InputMapper::inputEventProcessor: Processing input event type "
+      "%s (0x%04x) in group 0x%04x.",
+      getSDLEventTypeName(event->type), event->type, evtGroup);
   switch (evtGroup) {
     case EVT_KEYBOARD_FIRST:
       return pimpl_->handleKeyboardEvent(event);
@@ -371,10 +374,9 @@ RENITY_API InputMapper::~InputMapper() {
 }
 
 RENITY_API void InputMapper::load(const char *path) {
-  SDL_LogDebug(
-      SDL_LOG_CATEGORY_INPUT,
-      "InputMapper::load: Loading mapping from '%s' using pimpl 0x%08x",
-      path ? path : "<nullptr>", pimpl_);
+  SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
+               "InputMapper::load: Loading mapping from '%s'",
+               path ? path : "<nullptr>");
 
   // Load built-in default maps if no path supplied
   SDL_RWops *ops =

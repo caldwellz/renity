@@ -48,8 +48,8 @@ RENITY_API ActionManager::~ActionManager() {
 
 RENITY_API ActionManager* ActionManager::getActive() {
   if (!currentActionManager) {
-    SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
-                 "ActionManager::getActive: No active instance.");
+    SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                "ActionManager::getActive: No active instance.");
   }
   return currentActionManager;
 }
@@ -101,10 +101,11 @@ RENITY_API void ActionManager::subscribe(SharedPtr<ActionHandler> handler,
   const ActionCategoryId catId = getId(actionCategory);
   pimpl_->names.put(catId, actionCategory);
   pimpl_->handlers.get(catId).push_back(handler);
-  SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
-               "ActionManager::subscribe: Subscribed new handler for category "
-               "%s (0x%08x).",
-               actionCategory.c_str(), catId);
+  SDL_LogVerbose(
+      SDL_LOG_CATEGORY_APPLICATION,
+      "ActionManager::subscribe: Subscribed new handler for category "
+      "%s (0x%08x).",
+      actionCategory.c_str(), catId);
 }
 
 RENITY_API ActionId ActionManager::assignCategory(String actionName,
@@ -114,10 +115,11 @@ RENITY_API ActionId ActionManager::assignCategory(String actionName,
   pimpl_->names.put(actId, actionName);
   pimpl_->names.put(catId, actionCategory);
   pimpl_->categories.put(actId, catId);
-  SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
-               "ActionManager::assignCategory: Assigned action %s (0x%08x) to "
-               "category %s (0x%08x).",
-               actionName.c_str(), actId, actionCategory.c_str(), catId);
+  SDL_LogVerbose(
+      SDL_LOG_CATEGORY_APPLICATION,
+      "ActionManager::assignCategory: Assigned action %s (0x%08x) to "
+      "category %s (0x%08x).",
+      actionName.c_str(), actId, actionCategory.c_str(), catId);
   return actId;
 }
 }  // namespace renity
