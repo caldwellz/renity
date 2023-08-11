@@ -75,10 +75,10 @@ struct InputMapper::Impl : public ActionHandler {
     // Input types & hashes are distributed via Unmapped*Input actions; handlers
     // elsewhere should attach actId's and send them back via InputMappingChange
     static const ActionId mapChange =
-        ActionManager::getActive()->assignCategory(getId("InputMappingChange"),
-                                                   getId("InputChange"));
+        ActionManager::getActive()->assignCategory("InputMappingChange",
+                                                   "InputChange");
     // static const ActionId devChange = ActionManager::getActive()->
-    // assignCategory(getId("InputDeviceChange"), getId("InputChange"));
+    // assignCategory("InputDeviceChange", "InputChange");
 
     if (action->getId() == mapChange) {
       ActionId actId = action->getDataAs<ActionId>(0);
@@ -158,13 +158,11 @@ struct InputMapper::Impl : public ActionHandler {
   }
 
   int handleKeyboardEvent(const SDL_Event *event) {
-    static const Id inputCat = getId("Input");
     static const ActionId textInput =
-        ActionManager::getActive()->assignCategory(getId("TextInput"),
-                                                   inputCat);
+        ActionManager::getActive()->assignCategory("TextInput", "Input");
     static const ActionId unmappedInput =
-        ActionManager::getActive()->assignCategory(getId("UnmappedButtonInput"),
-                                                   inputCat);
+        ActionManager::getActive()->assignCategory("UnmappedButtonInput",
+                                                   "Input");
     const char *evtTypeName = getSDLEventTypeName(event->type);
     String inputText;
 
@@ -244,8 +242,8 @@ struct InputMapper::Impl : public ActionHandler {
 
   int handleMouseEvent(const SDL_Event *event) {
     static const ActionId unmappedInput =
-        ActionManager::getActive()->assignCategory(getId("UnmappedAxisInput"),
-                                                   getId("Input"));
+        ActionManager::getActive()->assignCategory("UnmappedAxisInput",
+                                                   "Input");
 
     // Handle button input
     if (event->type == SDL_EVENT_MOUSE_BUTTON_DOWN ||
@@ -361,10 +359,9 @@ RENITY_API InputMapper::InputMapper(const char *loadPath) {
   SDL_AddEventWatch(inputEventProcessor, pimpl_);
   pimplHolder_ = ActionHandlerPtr(pimpl_);
 
-  const Id changeCat = getId("InputChange");
-  ActionManager::getActive()->assignCategory(getId("InputMappingChange"),
-                                             changeCat);
-  ActionManager::getActive()->subscribe(pimplHolder_, changeCat);
+  ActionManager::getActive()->assignCategory("InputMappingChange",
+                                             "InputChange");
+  ActionManager::getActive()->subscribe(pimplHolder_, "InputChange");
   load(loadPath);
 }
 

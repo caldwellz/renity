@@ -83,8 +83,10 @@ int windowEventProcessor(void *userdata, SDL_Event *event) {
   }
   if (!windowEvent) {
     if (event->type != SDL_EVENT_POLL_SENTINEL)
-      SDL_LogDebug(SDL_LOG_CATEGORY_VIDEO, "Sending event %s (0x%04x) to GUI",
-                   getSDLEventTypeName(event->type), event->type);
+      SDL_LogVerbose(
+          SDL_LOG_CATEGORY_VIDEO,
+          "Window::windowEventProcessor: Sending event %s (0x%04x) to GUI",
+          getSDLEventTypeName(event->type), event->type);
     ImGui_ImplSDL3_ProcessEvent(event);
     return 1;
   }
@@ -289,11 +291,10 @@ RENITY_API bool Window::open() {
 
   // Register window events under the "Window" action category
   // Doesn't work right in the constructor, so we'll do it here
-  const ActionCategoryId catId = getId("Window");
   for (Uint32 type = SDL_EVENT_WINDOW_FIRST; type <= SDL_EVENT_WINDOW_LAST;
        ++type) {
-    ActionManager::getActive()->assignCategory(getSDLEventTypeActionId(type),
-                                               catId);
+    ActionManager::getActive()->assignCategory(getSDLEventTypeString(type),
+                                               "Window");
   }
 
   // TEXT_INPUT events seem to be enabled by default on at least Windows;

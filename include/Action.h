@@ -23,11 +23,14 @@ enum ActionStatus {
 */
 class RENITY_API Action {
  public:
-  Action();
   Action(const ActionId id, Vector<PrimitiveVariant> data);
   Action(const String actionName, Vector<PrimitiveVariant> data);
 
   ActionId getId() const;
+
+  /** Get the name of this action if it has been registered with the active
+   * ActionManager, or an empty String otherwise. */
+  String getName() const;
 
   Timestamp getCreatedAt() const;
 

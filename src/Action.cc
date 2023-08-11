@@ -12,12 +12,11 @@
 
 #include <SDL3/SDL_timer.h>
 
+#include "ActionManager.h"
 #include "types.h"
 #include "utils/id_helpers.h"
 
 namespace renity {
-RENITY_API Action::Action() { Action(0, {}); }
-
 RENITY_API Action::Action(const ActionId id, Vector<PrimitiveVariant> data) {
   // status_.store(AS_Waiting);
   id_ = id;
@@ -31,6 +30,10 @@ RENITY_API Action::Action(const String actionName,
 }
 
 RENITY_API ActionId Action::getId() const { return id_; }
+
+RENITY_API String Action::getName() const {
+  return ActionManager::getActive()->getNameFromId(id_);
+}
 
 RENITY_API Timestamp Action::getCreatedAt() const { return createdAt_; }
 /*

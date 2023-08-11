@@ -34,6 +34,12 @@ class RENITY_API ActionManager {
    */
   static ActionManager *getActive();
 
+  /** Get the name of a registered action or category from its id.
+   * \returns A String containing the name that translates to the given id,
+   * or an empty String if nothing has been registered with that name.
+   */
+  String getNameFromId(Id id) const;
+
   /** Activate this ActionManager.
    * Makes it the "current" manager for subsequent posts by other managers.
    */
@@ -52,12 +58,12 @@ class RENITY_API ActionManager {
    * Note that all side effects of the handler *must* be thread safe, since it
    * may be called from several different worker threads *simultaneously*.
    */
-  void subscribe(ActionHandlerPtr handler, ActionCategoryId actionCategory);
+  void subscribe(ActionHandlerPtr handler, String actionCategory);
 
   /** (Re)assign an ActionId to a category.
-   * @return The unmodified actionId, to make static assignment easier.
+   * @return The id of the action name, to make static assignment easier.
    */
-  ActionId assignCategory(ActionId actionId, ActionCategoryId actionCategory);
+  ActionId assignCategory(String actionName, String actionCategory);
 
   // TODO: Do we need these?
   /** Continue enqueuing Actions, but stop processing them. */

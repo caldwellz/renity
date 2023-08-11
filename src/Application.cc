@@ -75,7 +75,7 @@ class ActionLogger : public ActionHandler {
 
   void handleAction(const ActionCategoryId categoryId, const Action *action) {
     static ActionId discardedInput =
-        ActionManager::getActive()->assignCategory(0xB00FB00F, getId("Input"));
+        ActionManager::getActive()->assignCategory("DebugIgnore", "Input");
     static ActionId changeInput = getId("InputMappingChange");
     static ActionId unmappedButton = getId("UnmappedButtonInput");
     static ActionId unmappedAxis = getId("UnmappedAxisInput");
@@ -88,11 +88,13 @@ class ActionLogger : public ActionHandler {
           "actionId:0x%08x",
           categoryId, action->getId(), action->getCreatedAt() / 1000.0f);
     } else {
-      SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
-                   "ActionLogger::handleAction: categoryId:0x%08x, "
-                   "actionId:0x%08x, createdAt: %.1f secs, data:",
-                   categoryId, action->getId(),
-                   action->getCreatedAt() / 1000.0f);
+      SDL_LogDebug(
+          SDL_LOG_CATEGORY_APPLICATION,
+          "ActionLogger::handleAction: action: %s (0x%08x), category: "
+          "%s (0x%08x), createdAt: %.1f secs, data:",
+          action->getName().c_str(), action->getId(),
+          ActionManager::getActive()->getNameFromId(categoryId).c_str(),
+          categoryId, action->getCreatedAt() / 1000.0f);
       for (auto i = 0; i < action->getDataCount(); ++i) {
         logAny(i, action->getData(i));
       }
@@ -120,9 +122,9 @@ RENITY_API Application::Application(int argc, char *argv[]) {
 
   // Register an Action logger for various categories
   ActionHandlerPtr actLogger(new ActionLogger);
-  // pimpl_->actionMgr.subscribe(actLogger, getId("Window"));
-  pimpl_->actionMgr.subscribe(actLogger, getId("Input"));
-  // pimpl_->actionMgr.subscribe(actLogger, getId("InputChange"));
+  pimpl_->actionMgr.subscribe(actLogger, "Window");
+  pimpl_->actionMgr.subscribe(actLogger, "Input");
+  pimpl_->actionMgr.subscribe(actLogger, "InputChange");
 #endif
 }
 

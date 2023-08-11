@@ -26,6 +26,7 @@ struct ActionManager::Impl {
 
   HashTable<ActionId, ActionCategoryId> categories;
   HashTable<ActionCategoryId, Vector<SharedPtr<ActionHandler> > > handlers;
+  HashTable<Id, String> names;
 };
 
 RENITY_API ActionManager::ActionManager() {
@@ -53,6 +54,10 @@ RENITY_API ActionManager* ActionManager::getActive() {
   return currentActionManager;
 }
 
+RENITY_API String ActionManager::getNameFromId(Id id) const {
+  return pimpl_->names.get(id);
+}
+
 RENITY_API void ActionManager::activate() { currentActionManager = this; }
 
 RENITY_API bool ActionManager::post(Action action) {
@@ -68,8 +73,8 @@ RENITY_API bool ActionManager::post(Action action) {
   if (pimpl_->handlers.get(catId).empty()) {
     SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
                 "ActionManager::post: ActionCategoryId 0x%04x has no "
-                "subscribed handlers - ignoring ActionId 0x%04x.",
-                catId, action.getId());
+                "subscribed handlers - ignoring action %s (0x%04x).",
+                catId, action.getName().c_str(), action.getId());
     return false;
   }
 
@@ -84,29 +89,35 @@ RENITY_API bool ActionManager::post(Action action) {
 }
 
 RENITY_API void ActionManager::subscribe(SharedPtr<ActionHandler> handler,
-                                         ActionCategoryId actionCategory) {
+                                         String actionCategory) {
   if (!handler) {
     SDL_LogError(
         SDL_LOG_CATEGORY_APPLICATION,
-        "ActionManager::subscribe: No handler given for actionCategory %u.",
-        actionCategory);
+        "ActionManager::subscribe: No handler given for actionCategory %s.",
+        actionCategory.c_str());
     return;
   }
 
-  pimpl_->handlers.get(actionCategory).push_back(handler);
-  SDL_LogDebug(
-      SDL_LOG_CATEGORY_APPLICATION,
-      "ActionManager::subscribe: Subscribed new handler for category 0x%08x.",
-      actionCategory);
+  const ActionCategoryId catId = getId(actionCategory);
+  pimpl_->names.put(catId, actionCategory);
+  pimpl_->handlers.get(catId).push_back(handler);
+  SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
+               "ActionManager::subscribe: Subscribed new handler for category "
+               "%s (0x%08x).",
+               actionCategory.c_str(), catId);
 }
 
-RENITY_API ActionId ActionManager::assignCategory(
-    ActionId actionId, ActionCategoryId actionCategory) {
-  pimpl_->categories.put(actionId, actionCategory);
+RENITY_API ActionId ActionManager::assignCategory(String actionName,
+                                                  String actionCategory) {
+  const Id actId = getId(actionName);
+  const Id catId = getId(actionCategory);
+  pimpl_->names.put(actId, actionName);
+  pimpl_->names.put(catId, actionCategory);
+  pimpl_->categories.put(actId, catId);
   SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
-               "ActionManager::assignCategory: Assigned action 0x%08x to "
-               "category 0x%08x.",
-               actionId, actionCategory);
-  return actionId;
+               "ActionManager::assignCategory: Assigned action %s (0x%08x) to "
+               "category %s (0x%08x).",
+               actionName.c_str(), actId, actionCategory.c_str(), catId);
+  return actId;
 }
 }  // namespace renity
