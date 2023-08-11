@@ -1,5 +1,5 @@
 /****************************************************
- * default_input_maps.h: Default input mappings     *
+ * input_maps.h: Default input mappings             *
  * Copyright (C) 2023 by Zach Caldwell              *
  ****************************************************
  * This Source Code Form is subject to the terms of *

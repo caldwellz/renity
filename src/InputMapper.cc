@@ -19,7 +19,7 @@
 #include "Dictionary.h"
 #include "HashTable.h"
 #include "ResourceManager.h"
-#include "resources/default_input_maps.h"
+#include "resources/default/input_maps.h"
 #include "utils/id_helpers.h"
 #include "utils/physfsrwops.h"
 
@@ -381,8 +381,7 @@ RENITY_API void InputMapper::load(const char *path) {
   // Load built-in default maps if no path supplied
   SDL_RWops *ops =
       path ? PHYSFSRWOPS_openRead(path)
-           : SDL_RWFromConstMem(
-                 "{}", 3);  // pDefaultInputMapData, pDefaultInputMapSize);
+           : SDL_RWFromConstMem(pDefaultInputMapData, pDefaultInputMapSize);
   pimpl_->mapDict.load(ops);
 }
 
