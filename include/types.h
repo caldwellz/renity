@@ -59,6 +59,7 @@ using typeHash = typeid(T).hash_code;
 #define MAX(a, b) (((b) < (a)) ? (a) : (b))
 
 // using declarations don't work with these for some reason...
+#define constStrlen(str) std::char_traits<char>::length(str)
 #define dynamicPointerCast std::dynamic_pointer_cast
 #define staticPointerCast std::static_pointer_cast
 #define makeSharedPtr std::make_shared

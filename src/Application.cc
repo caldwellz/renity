@@ -19,9 +19,11 @@
 #include "3rdparty/imgui/imgui.h"
 #include "ActionHandler.h"
 #include "ActionManager.h"
+#include "InputMapper.h"
 #include "ResourceManager.h"
 #include "Window.h"
 // #include "Sprite.h"
+
 #include "config.h"
 #include "types.h"
 #include "utils/id_helpers.h"
@@ -29,7 +31,7 @@
 
 namespace renity {
 struct Application::Impl {
-  Impl(const char *argv0) {
+  explicit Impl(const char *argv0) {
     context = nullptr;
     executableName = argv0;
     headless = false;
@@ -37,6 +39,7 @@ struct Application::Impl {
 
   Window window;
   ActionManager actionMgr;
+  InputMapper inputMapper;
   ResourceManager resMgr;
   SDL_GLContext context;
   const char *executableName;
@@ -44,36 +47,82 @@ struct Application::Impl {
 };
 
 #ifdef RENITY_DEBUG
+// Boilerplate to make visit() work
+template <class... Ts>
+struct overloaded : Ts... {
+  using Ts::operator()...;
+};
+template <class... Ts>
+overloaded(Ts...) -> overloaded<Ts...>;
+
 class ActionLogger : public ActionHandler {
+  void logAny(size_t index, const PrimitiveVariant &any) {
+    String str = std::visit(
+        overloaded{[](auto arg) {
+                     String s(typeName(arg));
+                     return s + " " + toString(arg);
+                   },
+                   [](void *arg) {
+                     char str[17];
+                     snprintf(str, 11, "void* 0x%llx", (uintptr_t)arg);
+                     return String(str);
+                   },
+                   [](const String &arg) { return String("String ") + arg; }},
+        any);
+    SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "    %i: %s", index,
+                 str.c_str());
+  }
+
   void handleAction(const ActionCategoryId categoryId, const Action *action) {
-    SDL_LogDebug(
-        SDL_LOG_CATEGORY_APPLICATION,
-        "ActionLogger::handleAction: categoryId:0x%08x, "
-        "actionId:0x%08x, createdAt: %.1f secs, dataA:0x%08x, dataB:0x%08x",
-        categoryId, action->getId(), action->getCreatedAt() / 1000.0f,
-        action->getDataA(), action->getDataB());
+    static ActionId discardedInput =
+        ActionManager::getActive()->assignCategory(0xB00FB00F, getId("Input"));
+    static ActionId changeInput = getId("InputMappingChange");
+    static ActionId unmappedButton = getId("UnmappedButtonInput");
+    static ActionId unmappedAxis = getId("UnmappedAxisInput");
+    if (action->getId() == unmappedButton || action->getId() == unmappedAxis) {
+      ActionManager::getActive()->post(
+          Action(changeInput, {discardedInput, action->getData(0)}));
+      SDL_LogDebug(
+          SDL_LOG_CATEGORY_APPLICATION,
+          "ActionLogger::handleAction: REGISTERING INPUT categoryId:0x%08x, "
+          "actionId:0x%08x",
+          categoryId, action->getId(), action->getCreatedAt() / 1000.0f);
+    } else {
+      SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
+                   "ActionLogger::handleAction: categoryId:0x%08x, "
+                   "actionId:0x%08x, createdAt: %.1f secs, data:",
+                   categoryId, action->getId(),
+                   action->getCreatedAt() / 1000.0f);
+      for (auto i = 0; i < action->getDataCount(); ++i) {
+        logAny(i, action->getData(i));
+      }
+    }
   }
 };
 #endif
 
 RENITY_API Application::Application(int argc, char *argv[]) {
-  // TODO: Command-line flags parsing
-  pimpl_ = new Impl(argv ? argv[0] : nullptr);
-
 #ifdef RENITY_DEBUG
   // Redirect logs to a file and turn on debug logs
   // freopen("stderr.txt", "w", stderr);
   SDL_LogSetAllPriority(SDL_LOG_PRIORITY_DEBUG);
+#else
+  SDL_LogSetAllPriority(SDL_LOG_PRIORITY_WARN);
+  SDL_LogSetPriority(SDL_LOG_CATEGORY_APPLICATION, SDL_LOG_PRIORITY_INFO);
+#endif
 
+  // TODO: Command-line flags parsing
+  pimpl_ = new Impl(argv && argc ? argv[0] : nullptr);
+
+#ifdef RENITY_DEBUG
   // Watch for file changes
   dmon_init();
 
   // Register an Action logger for various categories
   ActionHandlerPtr actLogger(new ActionLogger);
-  pimpl_->actionMgr.subscribe(actLogger, getId("Window"));
-#else
-  SDL_LogSetAllPriority(SDL_LOG_PRIORITY_WARN);
-  SDL_LogSetPriority(SDL_LOG_CATEGORY_APPLICATION, SDL_LOG_PRIORITY_INFO);
+  // pimpl_->actionMgr.subscribe(actLogger, getId("Window"));
+  pimpl_->actionMgr.subscribe(actLogger, getId("Input"));
+  // pimpl_->actionMgr.subscribe(actLogger, getId("InputChange"));
 #endif
 }
 
@@ -81,8 +130,10 @@ RENITY_API Application::~Application() {
 #ifdef RENITY_DEBUG
   dmon_deinit();
 #endif
-  this->destroy();
+  pimpl_->window.close();
+  PHYSFS_deinit();
   delete this->pimpl_;
+  SDL_Quit();
 }
 
 RENITY_API bool Application::initialize(bool headless) {
@@ -117,12 +168,14 @@ RENITY_API bool Application::initialize(bool headless) {
   const char *baseDir = PHYSFS_getBaseDir();
   const char *prefDir = PHYSFS_getPrefDir(PUBLISHER_NAME, PRODUCT_NAME);
   if (!PHYSFS_mount(prefDir, "/", 0) || !PHYSFS_setWriteDir(prefDir)) {
-    SDL_SetError(
-        "Could not mount PhysFS prefDir '%s' using publisher '%s', product "
-        "'%s': %s",
-        prefDir, PUBLISHER_NAME, PRODUCT_NAME,
-        PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
-    return false;
+    if (!PHYSFS_setWriteDir(baseDir)) {
+      SDL_SetError(
+          "Could not mount PhysFS prefDir '%s' using publisher '%s', product "
+          "'%s': %s",
+          prefDir, PUBLISHER_NAME, PRODUCT_NAME,
+          PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
+      return false;
+    }
   }
   if (!PHYSFS_mount(baseDir, "/", 1)) {
     SDL_SetError("Could not mount PhysFS baseDir '%s': %s", baseDir,
@@ -151,6 +204,13 @@ RENITY_API bool Application::initialize(bool headless) {
 
   // TODO: Load window/display settings from app config
   if (!headless) {
+    // Load user profile data
+#ifdef RENITY_DEBUG
+    pimpl_->inputMapper.load("keybinds.json");
+#else
+    pimpl_->inputMapper.load("keybinds.dat");
+#endif
+
     // Default to a window taking up 3/4 of the screen, if over a certain size
     SDL_DisplayID display = SDL_GetPrimaryDisplay();
     SDL_Rect bounds = {0, 0, 0, 0};
@@ -187,7 +247,7 @@ RENITY_API int Application::run() {
   // Vector<Sprite> sprites;
   Uint64 spriteCount = 0;
   srand((Uint32)SDL_GetTicksNS());
-  getWindow()->vsync(false);
+  // getWindow()->vsync(false);
   getWindow()->clearColor({0, 0, 200, 255});
 
   while (keepGoing) {
@@ -282,12 +342,6 @@ RENITY_API int Application::run() {
   }
 
   return 0;
-}
-
-RENITY_API void Application::destroy() {
-  pimpl_->window.close();
-  SDL_Quit();
-  PHYSFS_deinit();
 }
 
 RENITY_API Window *Application::getWindow() const { return &(pimpl_->window); }

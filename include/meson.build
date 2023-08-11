@@ -21,6 +21,7 @@ lib_headers = [
   , 'Dictionary.h'
   , 'Dimension2D.h'
   , 'HashTable.h'
+  , 'InputMapper.h'
   , 'Point2D.h'
   , 'Rect2D.h'
   , 'Resource.h'

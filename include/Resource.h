@@ -7,13 +7,16 @@
  * the MPL was not distributed with this file, You  *
  * can obtain one at http://mozilla.org/MPL/2.0/.   *
  ***************************************************/
-
 #pragma once
 
 #include <SDL3/SDL_rwops.h>
 
+#include "types.h"
+
 namespace renity {
-class Resource {
+class ResourceManager;
+
+class RENITY_API Resource {
  public:
   Resource(){};
   virtual ~Resource(){};
@@ -25,6 +28,9 @@ class Resource {
   Resource(const Resource &other) = delete;
   Resource &operator=(Resource &other) = delete;
   Resource &operator=(const Resource &other) = delete;
+
+ protected:
+  friend class ResourceManager;
 
   /** Load the resource from an SDL_RWops stream.
    * Derived classes should start in a usable, empty state on construction.

@@ -21,8 +21,17 @@ class RENITY_API Dictionary : public Resource {
 
   void load(SDL_RWops *src);
 
+  /** Save Dictionary contents to a file.
+   * @param destPath Destination PhysFS path. File extension will determine what
+   * format it saves in, defaulting to CBOR for ones it doesn't recognize.
+   * @param selectionOnly Whether to save just the current selection, or the
+   * entire Dictionary.
+   * @return True if the operation succeeded, false otherwise.
+   */
+  bool save(const char *destPath, bool selectionOnly = false);
+
   /** Save Dictionary contents to a JSON file.
-   * @param destPath Destination file path. Contents will always be written as
+   * @param destPath Destination PhysFS path. Contents will always be written as
    * JSON, regardless of file extension.
    * @param selectionOnly Whether to save just the current selection, or the
    * entire Dictionary.
@@ -31,7 +40,7 @@ class RENITY_API Dictionary : public Resource {
   bool saveJSON(const char *destPath, bool selectionOnly = false);
 
   /** Save Dictionary contents to a CBOR file.
-   * @param destPath Destination file path. Contents will always be written as
+   * @param destPath Destination PhysFS path. Contents will always be written as
    * CBOR, regardless of file extension.
    * @param selectionOnly Whether to save just the current selection, or the
    * entire Dictionary.

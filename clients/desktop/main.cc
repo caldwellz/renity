@@ -24,7 +24,5 @@ int main(int argc, char *argv[]) {
                              NULL);
     return 1;
   }
-  int status = app.run();
-  app.destroy();
-  return status;
+  return app.run();
 }

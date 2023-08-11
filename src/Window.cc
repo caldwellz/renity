@@ -39,6 +39,7 @@ struct Window::Impl {
     fullscreen = false;
     fullscreenMode = nullptr;
     vsyncState = 0;
+    wantToClose = false;
   }
 
   SDL_Window *window;
@@ -53,6 +54,7 @@ struct Window::Impl {
   bool fullscreen;
   SDL_DisplayMode *fullscreenMode;
   int vsyncState;
+  bool wantToClose;
 };
 
 RENITY_API Window::Window() {
@@ -67,7 +69,7 @@ RENITY_API Window::~Window() {
 
 // TODO: Make this thread-safe, probably via a mutex in close()
 int windowEventProcessor(void *userdata, SDL_Event *event) {
-  Window *w = (Window *)userdata;
+  Window *w = static_cast<Window *>(userdata);
   const bool windowEvent = event->type >= SDL_EVENT_WINDOW_FIRST &&
                            event->type <= SDL_EVENT_WINDOW_LAST;
   const bool currentWindowEvent =
@@ -76,10 +78,13 @@ int windowEventProcessor(void *userdata, SDL_Event *event) {
   // ImGui wants all event types, but filter out ones for other windows and ones
   // we handle here to avoid confusing it.
   if (event->type == SDL_EVENT_QUIT) {
-    w->close();
+    w->pimpl_->wantToClose = true;
     return 1;
   }
   if (!windowEvent) {
+    if (event->type != SDL_EVENT_POLL_SENTINEL)
+      SDL_LogDebug(SDL_LOG_CATEGORY_VIDEO, "Sending event %s (0x%04x) to GUI",
+                   getSDLEventTypeName(event->type), event->type);
     ImGui_ImplSDL3_ProcessEvent(event);
     return 1;
   }
@@ -93,8 +98,8 @@ int windowEventProcessor(void *userdata, SDL_Event *event) {
   switch (event->window.type) {
     case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
     case SDL_EVENT_WINDOW_DESTROYED:
-      w->close();
-      break;
+      w->pimpl_->wantToClose = true;
+      return 0;
     case SDL_EVENT_WINDOW_RESIZED:
       SDL_LogDebug(
           SDL_LOG_CATEGORY_APPLICATION,
@@ -147,7 +152,9 @@ int windowEventProcessor(void *userdata, SDL_Event *event) {
 
 RENITY_API Window *Window::getActive() { return currentWindow; }
 
-RENITY_API bool Window::isOpen() const { return (pimpl_->glContext); }
+RENITY_API bool Window::isOpen() const {
+  return pimpl_->glContext && !pimpl_->wantToClose;
+}
 
 RENITY_API bool Window::open() {
   // Status checks
@@ -289,6 +296,11 @@ RENITY_API bool Window::open() {
                                                catId);
   }
 
+  // TEXT_INPUT events seem to be enabled by default on at least Windows;
+  // pause them until we actually want "text input" (instead of plain keys).
+  // Not done in InputMapper because it only takes effect after a window opens
+  SDL_StopTextInput();
+
   // Watch for window events
   SDL_AddEventWatch(windowEventProcessor, this);
 
@@ -301,10 +313,14 @@ RENITY_API bool Window::open() {
   ImGui_ImplSDL3_NewFrame();
   ImGui::NewFrame();
 
+  pimpl_->wantToClose = false;
   return activate();
 }
 
 RENITY_API void Window::close() {
+  SDL_LogVerbose(SDL_LOG_CATEGORY_VIDEO, "Window::close: Closing window %i",
+                 getWindowID());
+
   if (pimpl_->guiCtx) {
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplSDL3_Shutdown();
@@ -318,8 +334,8 @@ RENITY_API void Window::close() {
   }
 
   if (pimpl_->window) {
-    SDL_DestroyWindow(pimpl_->window);
     SDL_DelEventWatch(windowEventProcessor, this);
+    SDL_DestroyWindow(pimpl_->window);
     pimpl_->window = nullptr;
   }
 
@@ -327,7 +343,7 @@ RENITY_API void Window::close() {
 }
 
 RENITY_API bool Window::activate() {
-  if (!pimpl_->window) return false;
+  if (!isOpen()) return false;
 
   // Activate OpenGL context and reload context-specific functions
   SDL_GL_MakeCurrent(pimpl_->window, pimpl_->glContext);
@@ -336,7 +352,7 @@ RENITY_API bool Window::activate() {
         SDL_LOG_CATEGORY_VIDEO,
         "renity::Window::activate: Could not (re)load OpenGL functions: '%s'",
         SDL_GetError());
-    close();
+    pimpl_->wantToClose = true;
     return false;
   }
 
@@ -360,7 +376,9 @@ RENITY_API bool Window::activate() {
 }
 
 RENITY_API bool Window::update() {
-  if (pimpl_->glContext == nullptr || currentWindow != this) return false;
+  if (!isOpen() || currentWindow != this) {
+    return false;
+  }
 
   // Render last frame's GUI
   ImGui::Render();

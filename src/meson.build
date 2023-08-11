@@ -42,6 +42,7 @@ lib_srcs = files([
 , 'Application.cc'
 , 'Dictionary.cc'
 #, 'EntityManager.cc'
+, 'InputMapper.cc'
 , 'ResourceManager.cc'
 #, 'Sprite.cc'
 #, 'Texture.cc'

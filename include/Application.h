@@ -22,7 +22,7 @@ class RENITY_API Application {
   Application(int argc, char *argv[]);
   ~Application();
 
-  /* TODO: Someday it may make sense to allow copying/moving Application \
+  /* TODO: Someday it may make sense to allow copying/moving Application
    * objects, but for now, delete the functions to prevent it.
    */
   Application(Application &other) = delete;
@@ -31,9 +31,9 @@ class RENITY_API Application {
   Application &operator=(const Application &other) = delete;
 
   /** Initialize the application.
-   * Loads configuration and resources, creates a window (if not in headless \
+   * Loads configuration and resources, creates a window (if not in headless
    * mode), etc.
-   * \returns True if the application was successfully initialized, false \
+   * \returns True if the application was successfully initialized, false
    * otherwise.
    */
   bool initialize(bool headless = false);
@@ -44,13 +44,8 @@ class RENITY_API Application {
    */
   int run();
 
-  /** De-initialize the application.
-   * Unloads configuration and resources, destroys any windows, etc.
-   */
-  void destroy();
-
   /** Get the internal Renity Window of the application.
-   * \returns A Window pointer if a window is open and there is a \
+   * \returns A Window pointer if a window is open and there is a
    * valid renderer; NULL otherwise.
    */
   Window *getWindow() const;

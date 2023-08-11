@@ -43,6 +43,15 @@ class HashTable {
     return map[getId(k)];
   }
 
+  /** Get an item from the table, or save the given default value if missing. */
+  Val keep(Key k, Val defaultVal) {
+    if (exists(k)) {
+      return get(k);
+    }
+    put(k, defaultVal);
+    return defaultVal;
+  }
+
   /** Insert or overwrite an item in the table. */
   void put(Key k, Val v) { map[getId(k)] = v; }
 

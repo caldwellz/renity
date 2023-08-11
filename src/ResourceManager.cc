@@ -23,7 +23,7 @@
 namespace renity {
 using StrongRes = SharedPtr<Resource>;
 using WeakRes = WeakPtr<Resource>;
-ResourceManager *currentManager = nullptr;
+ResourceManager *currentResourceManager = nullptr;
 struct ResourceManager::Impl {
   HashTable<const char *, WeakRes> map;
 #ifdef RENITY_DEBUG
@@ -71,7 +71,7 @@ struct ResourceManager::Impl {
 
 RENITY_API ResourceManager::ResourceManager() {
   pimpl_ = new Impl();
-  if (!currentManager) currentManager = this;
+  if (!currentResourceManager) currentResourceManager = this;
 }
 
 RENITY_API ResourceManager::~ResourceManager() {
@@ -81,8 +81,12 @@ RENITY_API ResourceManager::~ResourceManager() {
   }
 #endif
   clear();
-  if (currentManager == this) currentManager = nullptr;
+  if (currentResourceManager == this) currentResourceManager = nullptr;
   delete this->pimpl_;
+}
+
+RENITY_API ResourceManager *ResourceManager::getActive() {
+  return currentResourceManager;
 }
 
 RENITY_API void ResourceManager::activate() {
@@ -99,12 +103,12 @@ RENITY_API void ResourceManager::activate() {
     }
   }
 #endif
-  currentManager = this;
+  currentResourceManager = this;
 }
 
 RENITY_API void ResourceManager::clear() {
-  if (currentManager == this) {
-    currentManager = nullptr;
+  if (currentResourceManager == this) {
+    currentResourceManager = nullptr;
   }
   pimpl_->map.clear();
 }
@@ -120,17 +124,24 @@ RENITY_API SharedPtr<Resource> ResourceManager::getOrCreate(
     return weak.lock();
   }
 
-  SDL_RWops *ops = PHYSFSRWOPS_openRead(path);
-  SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
-                 "ResourceManager::getOrCreate: CREATING ptr for '%s' (%s)\n",
-                 path, ops ? "valid" : "NOT valid");
-  const StrongRes &strong = StrongRes(factory(ops));
-  if (!ops) {
-    SDL_LogWarn(SDL_LOG_CATEGORY_SYSTEM,
-                "ResourceManager::getOrCreate: PHYSFSRWOPS_openRead(\"%s\") "
-                "failed: '%s'\n",
-                path, SDL_GetError());
+  SDL_RWops *ops = nullptr;
+  if (!path) {
+    SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                "ResourceManager::getOrCreate: No path specified - creating "
+                "empty Resource.\n");
+  } else if (path[0] != '<') {  // internal, non-file resources use <names>
+    ops = PHYSFSRWOPS_openRead(path);
+    SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
+                   "ResourceManager::getOrCreate: CREATING ptr for '%s' (%s)\n",
+                   path, ops ? "valid" : "NOT valid");
+    if (!ops) {
+      SDL_LogError(SDL_LOG_CATEGORY_SYSTEM,
+                   "ResourceManager::getOrCreate: PHYSFSRWOPS_openRead(\"%s\") "
+                   "failed: '%s'\n",
+                   path, SDL_GetError());
+    }
   }
+  const StrongRes &strong = StrongRes(factory(ops));
   weak = strong;
   return strong;
 }

@@ -2,6 +2,7 @@ utils_headers = [
   'id_helpers.h'
 , 'physfsrwops.h'
 , 'rwops_utils.h'
+, 'string_helpers.h'
 #, 'surface_utils.h'
 #, 'texture_utils.h'
 ]
