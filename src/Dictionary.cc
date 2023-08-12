@@ -48,8 +48,8 @@ RENITY_API void Dictionary::load(SDL_RWops *src) {
                  "Dictionary::load: Collapsed stack of %lu down to %lu.\n",
                  origTop, duk_get_top(pimpl_->ctx));
 
-  Uint8 *buf;
-  Sint64 bufSize = RENITY_ReadBuffer(src, &buf);
+  char *buf;
+  Sint64 bufSize = RENITY_ReadCharBuffer(src, &buf);
   if (bufSize < 1) {
     SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
                  "Dictionary::load: Invalid RWops (%li).\n", bufSize);

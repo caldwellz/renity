@@ -44,23 +44,23 @@ RENITY_API Sint64 RENITY_WriteBufferToPath(const char* dest, const Uint8* src,
   return writeCount;
 }
 
-RENITY_API Sint64 RENITY_ReadBufferMax(SDL_RWops* src, Uint8** bufOut,
-                                       Uint32 maxSize) {
+RENITY_API Sint64 RENITY_ReadRawBufferMax(SDL_RWops* src, Uint8** bufOut,
+                                          Uint32 maxSize) {
   if (src == NULL) {
     SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
-                 "RENITY_BufferWholeStream: src is NULL.\n");
+                 "RENITY_ReadRawBufferMax: src is NULL.\n");
     return -1;
   }
 
   Sint64 srcSize = SDL_RWsize(src);
   if (srcSize == 0) {
     SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
-                 "RENITY_BufferWholeStream: Stream size is 0.\n");
+                 "RENITY_ReadRawBufferMax: Stream size is 0.\n");
     return 0;
   }
   if (srcSize < 0) {
     SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
-                 "RENITY_BufferWholeStream: Could not determine stream size; "
+                 "RENITY_ReadRawBufferMax: Could not determine stream size; "
                  "allocating buffer of max size (%#010x).\n",
                  maxSize);
     srcSize = maxSize;
@@ -71,20 +71,32 @@ RENITY_API Sint64 RENITY_ReadBufferMax(SDL_RWops* src, Uint8** bufOut,
   SDL_DestroyRW(src);
   if (readBytes < 1) {
     SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
-                 "RENITY_BufferWholeStream: Could not read anything from "
+                 "RENITY_ReadRawBufferMax: Could not read anything from "
                  "buffer (%li).\n",
                  readBytes);
     SDL_free(buf);
     return readBytes;
   }
   if (readBytes < srcSize) {
-    SDL_LogWarn(
-        SDL_LOG_CATEGORY_APPLICATION,
-        "RENITY_BufferWholeStream: Could not read full buffer size (%li "
-        "vs %li).\n",
-        readBytes, srcSize);
+    SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                "RENITY_ReadRawBufferMax: Could not read full buffer size (%li "
+                "vs %li).\n",
+                readBytes, srcSize);
   }
 
   *bufOut = buf;
+  return readBytes;
+}
+
+RENITY_API Sint64 RENITY_ReadCharBufferMax(SDL_RWops* src, char** bufOut,
+                                           Uint32 maxSize) {
+  Uint8* buf = NULL;
+  Sint64 readBytes = RENITY_ReadRawBufferMax(src, &buf, maxSize);
+  if (readBytes >= 0) {
+    SDL_realloc(buf, readBytes + 1);
+    buf[readBytes] = '\0';
+    *bufOut = (char*)buf;
+  }
+
   return readBytes;
 }

@@ -22,6 +22,7 @@
 #include "InputMapper.h"
 #include "ResourceManager.h"
 #include "Window.h"
+#include "resources/GL_ShaderProgram.h"
 // #include "Sprite.h"
 
 #include "config.h"
@@ -202,12 +203,12 @@ RENITY_API bool Application::initialize(bool headless) {
   // PHYSFS_enumerate("/profile/Mods/", mountAssetPaks, (void *)prefDir);
 
   // Mount loose files in the application dir and then any asset packages
-  if (!PHYSFS_mount(baseDir, "/base", 1)) {
+  if (!PHYSFS_mount(baseDir, "/", 1)) {
     SDL_SetError("Could not mount baseDir '%s': %s", baseDir,
                  PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
     return false;
   }
-  PHYSFS_enumerate("/base", mountAssetPaks, nullptr);
+  PHYSFS_enumerate("/", mountAssetPaks, nullptr);
 
   // PHYSFS_setRoot(PHYSFS_getBaseDir(), "/assets");
   pimpl_->resMgr.activate();
@@ -276,6 +277,9 @@ RENITY_API int Application::run() {
   srand((Uint32)SDL_GetTicksNS());
   // getWindow()->vsync(false);
   getWindow()->clearColor({0, 0, 200, 255});
+  GL_ShaderProgramPtr shader =
+      ResourceManager::getActive()->get<GL_ShaderProgram>(
+          "/assets/shaders/simple.shader");
 
   while (keepGoing) {
     // Recalculate displayed FPS every second
@@ -346,6 +350,9 @@ RENITY_API int Application::run() {
                   fps);
       ImGui::End();
     }
+
+    // Draw sample shape
+    shader->use();
 
     // Pump events, then clear them all out after subsystems react to the
     // updates, only listening for quit here. Subsystems should use

@@ -36,4 +36,5 @@ base_include_subdir = meson.project_name()
 install_headers(lib_headers, subdir : meson.project_name())
 
 # Process subdirectories
+subdir('resources')
 subdir('utils')

@@ -18,6 +18,9 @@
 #include "types.h"
 
 namespace renity {
+// The std functions purposely do int<->char conversions - shush MSVC warnings
+#pragma warning(disable : 4244)
+
 /** Converts a string (non-multibyte) to uppercase, and returns a new String. */
 inline String toUpper(String str) {
   std::transform(str.begin(), str.end(), str.begin(), std::toupper);
@@ -35,4 +38,5 @@ inline bool endsWith(const String str, const String suffix) {
   return str.size() >= suffix.size() &&
          str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
 }
+#pragma warning(default : 4244)
 }  // namespace renity

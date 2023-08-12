@@ -49,6 +49,7 @@ lib_srcs = files([
 , 'Window.cc'
 ])
 subdir('3rdparty')
+subdir('resources')
 subdir('utils')
 
 

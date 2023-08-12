@@ -40,30 +40,29 @@ struct ResourceManager::Impl {
       Impl *pimpl_ = (Impl *)(user);
       WeakRes &weak = pimpl_->map.get(filepath);
       const char *statusStr = weak.expired() ? "unused" : "active";
+      ResourcePtr res = weak.lock();
       switch (action) {
         case DMON_ACTION_CREATE:
           SDL_Log("CREATE: [baseDir]/%s (%s)\n", filepath, statusStr);
-          if (!weak.expired())
-            weak.lock()->load(PHYSFSRWOPS_openRead(filepath));
+          if (!weak.expired()) res->load(PHYSFSRWOPS_openRead(filepath));
           break;
         case DMON_ACTION_DELETE:
           SDL_Log("DELETE: [baseDir]/%s (%s)\n", filepath, statusStr);
-          if (!weak.expired()) weak.lock()->load(nullptr);
+          if (!weak.expired()) res->load(nullptr);
           break;
         case DMON_ACTION_MODIFY:
           SDL_Log("MODIFY: [baseDir]/%s (%s)\n", filepath, statusStr);
-          if (!weak.expired())
-            weak.lock()->load(PHYSFSRWOPS_openRead(filepath));
+          if (!weak.expired()) res->load(PHYSFSRWOPS_openRead(filepath));
           break;
         case DMON_ACTION_MOVE:
           WeakRes &weakOld = pimpl_->map.get(oldFilepath);
           SDL_Log("MOVE: [baseDir]/%s (%s) -> [baseDir]/%s (%s)\n", oldFilepath,
                   weakOld.expired() ? "unused" : "active", filepath, statusStr);
           if (!weakOld.expired()) weakOld.lock()->load(nullptr);
-          if (!weak.expired())
-            weak.lock()->load(PHYSFSRWOPS_openRead(filepath));
+          if (!weak.expired()) res->load(PHYSFSRWOPS_openRead(filepath));
           break;
       }
+      if (res->cb_) res->cb_(res->userdata_);
     }
   }
 #endif
