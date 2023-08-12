@@ -31,7 +31,7 @@ inline String toLower(String str) {
 }
 
 /** Does a case-sensitive comparison between suffix and the end of str. */
-inline bool endsWith(const String& str, const String& suffix) {
+inline bool endsWith(const String str, const String suffix) {
   return str.size() >= suffix.size() &&
          str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
 }

@@ -11,6 +11,7 @@
 #include <SDL3/SDL_main.h>
 
 #include "Application.h"
+#include "types.h"
 
 int main(int argc, char *argv[]) {
   renity::Application app(argc, argv);
@@ -18,9 +19,12 @@ int main(int argc, char *argv[]) {
     SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
                     "Could not initialize application! Last SDL error: %s\n",
                     SDL_GetError());
-    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error",
-                             "Could not initialize application!\nPlease check "
-                             "logs for further details.",
+    renity::String boxMsg(
+        "Could not initialize application!\n"
+        "Please check logs for further details.\n"
+        "Last error: ");
+    boxMsg += SDL_GetError();
+    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error", boxMsg.c_str(),
                              NULL);
     return 1;
   }

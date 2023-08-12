@@ -25,4 +25,5 @@ endif
 if get_option('RENITY_BUILD_SERVER')
   subdir('server')
 endif
+subdir('assets')
 subdir('clients')

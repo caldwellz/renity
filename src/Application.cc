@@ -27,6 +27,7 @@
 #include "config.h"
 #include "types.h"
 #include "utils/id_helpers.h"
+#include "utils/string_helpers.h"
 #include "version.h"
 
 namespace renity {
@@ -138,6 +139,22 @@ RENITY_API Application::~Application() {
   SDL_Quit();
 }
 
+static PHYSFS_EnumerateCallbackResult mountAssetPaks(void *data,
+                                                     const char *origdir,
+                                                     const char *fname) {
+  if (endsWith(fname, ".pkg")) {
+    // Can't use origdir because it's in PhysFS notation, not platform-specific
+    String filePath(PHYSFS_getBaseDir());
+    filePath += fname;
+    if (!PHYSFS_mount(filePath.c_str(), "/assets", 1)) {
+      SDL_SetError("Could not mount asset pkg '%s': %s", filePath.c_str(),
+                   PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
+      return PHYSFS_ENUM_ERROR;
+    }
+  }
+  return PHYSFS_ENUM_OK;
+}
+
 RENITY_API bool Application::initialize(bool headless) {
   pimpl_->headless = headless;
 
@@ -169,21 +186,29 @@ RENITY_API bool Application::initialize(bool headless) {
   }
   const char *baseDir = PHYSFS_getBaseDir();
   const char *prefDir = PHYSFS_getPrefDir(PUBLISHER_NAME, PRODUCT_NAME);
-  if (!PHYSFS_mount(prefDir, "/", 0) || !PHYSFS_setWriteDir(prefDir)) {
+
+  // Mount loose files in the user's pref dir and then any mod packages
+  if (!PHYSFS_mount(prefDir, "/profile", 0) || !PHYSFS_setWriteDir(prefDir)) {
     if (!PHYSFS_setWriteDir(baseDir)) {
       SDL_SetError(
-          "Could not mount PhysFS prefDir '%s' using publisher '%s', product "
+          "Could not mount prefDir '%s' using publisher '%s' / product "
           "'%s': %s",
           prefDir, PUBLISHER_NAME, PRODUCT_NAME,
           PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
       return false;
     }
   }
-  if (!PHYSFS_mount(baseDir, "/", 1)) {
-    SDL_SetError("Could not mount PhysFS baseDir '%s': %s", baseDir,
+  // TODO: Implement a mod ordering/loading system instead of direct overrides
+  // PHYSFS_enumerate("/profile/Mods/", mountAssetPaks, (void *)prefDir);
+
+  // Mount loose files in the application dir and then any asset packages
+  if (!PHYSFS_mount(baseDir, "/base", 1)) {
+    SDL_SetError("Could not mount baseDir '%s': %s", baseDir,
                  PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
     return false;
   }
+  PHYSFS_enumerate("/base", mountAssetPaks, nullptr);
+
   // PHYSFS_setRoot(PHYSFS_getBaseDir(), "/assets");
   pimpl_->resMgr.activate();
 
