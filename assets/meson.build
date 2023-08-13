@@ -1,6 +1,10 @@
 asset_packages = {
-  'shaders': files([
-    'shaders/fragment/static_color.frag'
+  'meshes': files([
+    'meshes/pyramid.mesh'
+  , 'meshes/square.mesh'
+  ])
+, 'shaders': files([
+    'shaders/fragment/positional_color.frag'
   , 'shaders/vertex/direct_ndc.vert'
   , 'shaders/simple.shader'
   ])

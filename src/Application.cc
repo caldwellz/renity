@@ -22,10 +22,12 @@
 #include "InputMapper.h"
 #include "ResourceManager.h"
 #include "Window.h"
+#include "resources/GL_Mesh.h"
 #include "resources/GL_ShaderProgram.h"
 // #include "Sprite.h"
 
 #include "config.h"
+// #include "gl3.h"
 #include "types.h"
 #include "utils/id_helpers.h"
 #include "utils/string_helpers.h"
@@ -267,7 +269,7 @@ RENITY_API bool Application::initialize(bool headless) {
 RENITY_API int Application::run() {
   SDL_Event event;
   bool keepGoing = true;
-  bool show_demo_window = true;
+  bool show_demo_window = false;
   Uint32 frames = 0;
   Uint64 lastFrameTime = SDL_GetTicksNS();
   Uint64 fpsTime = 0;
@@ -277,9 +279,12 @@ RENITY_API int Application::run() {
   srand((Uint32)SDL_GetTicksNS());
   // getWindow()->vsync(false);
   getWindow()->clearColor({0, 0, 200, 255});
+  GL_Mesh::enableWireframe(false);
   GL_ShaderProgramPtr shader =
       ResourceManager::getActive()->get<GL_ShaderProgram>(
           "/assets/shaders/simple.shader");
+  GL_MeshPtr mesh =
+      ResourceManager::getActive()->get<GL_Mesh>("/assets/meshes/pyramid.mesh");
 
   while (keepGoing) {
     // Recalculate displayed FPS every second
@@ -353,6 +358,8 @@ RENITY_API int Application::run() {
 
     // Draw sample shape
     shader->use();
+    mesh->use();
+    mesh->draw();
 
     // Pump events, then clear them all out after subsystems react to the
     // updates, only listening for quit here. Subsystems should use

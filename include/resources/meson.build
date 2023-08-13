@@ -1,8 +1,9 @@
 resources_headers = files([
   'GL_FragShader.h'
-, 'GL_VertShader.h'
+, 'GL_Mesh.h'
 , 'GL_Shader.h'
 , 'GL_ShaderProgram.h'
+, 'GL_VertShader.h'
 , 'StringBuffer.h'
 ])
 

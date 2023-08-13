@@ -119,7 +119,8 @@ int windowEventProcessor(void *userdata, SDL_Event *event) {
                    "Window::windowEventProcessor: Window resized to %ix%i "
                    "actual pixels.\n",
                    event->window.data1, event->window.data2);
-      // glViewport(0, 0, event->window.data1, event->window.data2);
+      // TODO: Move this to a window event handler in the renderer
+      glViewport(0, 0, event->window.data1, event->window.data2);
       ImGui_ImplSDL3_ProcessEvent(event);
       break;
     // A bunch of event types that we know we don't currently care about
