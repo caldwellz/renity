@@ -30,15 +30,8 @@ class HashTable {
   /** Get an item from the table, constructing a new one if it doesn't exist. */
   Val &get(Key k) {
 #ifdef RENITY_DEBUG_VERBOSE
-    cout << "HashTable::get '" << k << "' (key:";
-    if (std::is_same<Key, const char *>::value) {
-      for (char *ptr = (char *)k; *ptr; ++ptr) {
-        cout << std::hex << (Uint16)*ptr;
-      }
-    } else {
-      cout << "[not a C str]";
-    }
-    cout << ", hash:" << std::hex << getId(k) << ")" << endl;
+    cerr << "HashTable::get key:[" << k << "], hash:" << std::hex << getId(k)
+         << endl;
 #endif
     return map[getId(k)];
   }
@@ -54,6 +47,15 @@ class HashTable {
 
   /** Insert or overwrite an item in the table. */
   void put(Key k, Val v) { map[getId(k)] = v; }
+
+  /** Enumerate all values in the table using a callback.
+   * The callback should return true to keep going, or false to stop.
+   */
+  void enumerate(const FuncPtr<bool(const Val &)> &callback) {
+    for (auto it : map) {
+      if (!callback(it.second)) return;
+    }
+  }
 
   /** Remove an item from the table. */
   void erase(Key k) { map.erase(getId(k)); }
@@ -87,7 +89,7 @@ class DualHashTable {
  protected:
   Uint64 dualHash(KeyA &a, KeyB &b) {
     Uint64 valA = (Uint64)getId(a);
-    Uint64 valB = (Uint64)getId(b);
+    Uint32 valB = getId(b);
     Uint64 res = valA << 32 | valB;
 #ifdef RENITY_DEBUG_VERBOSE
     cout << "dualHash: A='" << a << "' (" << std::hex << valA << "), B='" << b

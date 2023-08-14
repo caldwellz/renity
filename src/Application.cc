@@ -273,7 +273,7 @@ RENITY_API int Application::run() {
   Uint32 frames = 0;
   Uint64 lastFrameTime = SDL_GetTicksNS();
   Uint64 fpsTime = 0;
-  float fps = 1.0f;
+  float fps = 1.0f, red = 0.0f, green = 0.4f, blue = 0.7f;
   // Vector<Sprite> sprites;
   Uint64 spriteCount = 0;
   srand((Uint32)SDL_GetTicksNS());
@@ -282,7 +282,7 @@ RENITY_API int Application::run() {
   GL_Mesh::enableWireframe(false);
   GL_ShaderProgramPtr shader =
       ResourceManager::getActive()->get<GL_ShaderProgram>(
-          "/assets/shaders/simple.shader");
+          "/assets/shaders/uniform.shader");
   GL_MeshPtr mesh =
       ResourceManager::getActive()->get<GL_Mesh>("/assets/meshes/pyramid.mesh");
 
@@ -327,29 +327,22 @@ RENITY_API int Application::run() {
     // 2. Show a simple window that we create ourselves. We use a Begin/End pair
     // to create a named window.
     {
-      static float f = 0.0f;
-      static int counter = 0;
-
       ImGui::Begin("Hello, world!");  // Create a window called "Hello, world!"
                                       // and append into it.
 
-      ImGui::Text("Rendering %llu sprites.", spriteCount);
+      // ImGui::Text("Rendering %llu sprites.", spriteCount);
       ImGui::Checkbox(
           "Demo Window",
           &show_demo_window);  // Edit bools storing our window open/close state
 
-      ImGui::SliderFloat(
-          "float", &f, 0.0f,
-          1.0f);  // Edit 1 float using a slider from 0.0f to 1.0f
+      ImGui::SliderFloat("Red", &red, 0.0f, 1.0f, "%.3f",
+                         ImGuiSliderFlags_AlwaysClamp);
+      ImGui::SliderFloat("Green", &green, 0.0f, 1.0f, "%.3f",
+                         ImGuiSliderFlags_AlwaysClamp);
+      ImGui::SliderFloat("Blue", &blue, 0.0f, 1.0f, "%.3f",
+                         ImGuiSliderFlags_AlwaysClamp);
       // ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3
       // floats representing a color
-
-      if (ImGui::Button(
-              "Button"))  // Buttons return true when clicked (most widgets
-                          // return true when edited/activated)
-        counter++;
-      ImGui::SameLine();
-      ImGui::Text("counter = %d", counter);
 
       ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / fps,
                   fps);
@@ -357,6 +350,7 @@ RENITY_API int Application::run() {
     }
 
     // Draw sample shape
+    shader->setUniformBlock("ColorBlock", {red, green, blue, 0.5f});
     shader->use();
     mesh->use();
     mesh->draw();

@@ -13,12 +13,27 @@
 #include "types.h"
 
 namespace renity {
+// The GL guarantees >=24 binding points per program and up to 16kb block sizes:
+// https://registry.khronos.org/OpenGL-Refpages/es3.0/html/glGet.xhtml
+constexpr size_t MAX_UNIFORM_BLOCK_NAMES = 24;
+constexpr size_t MAX_UNIFORM_BLOCK_FLOATS = 16384 / sizeof(float);
+using UniformArray = Vector<float>;
+
 class RENITY_API GL_ShaderProgram : public Resource {
  public:
   GL_ShaderProgram();
   ~GL_ShaderProgram();
 
-  /** Make this the active shader for the current GL context. */
+  /** Set a uniform block's buffer data, up to MAX_UNIFORM_BLOCK_FLOATS.
+   * MAX_UNIFORM_BLOCK_NAMES specifies the max number of unique blockNames.
+   * \returns True on success, false otherwise.
+   */
+  bool setUniformBlock(String blockName, UniformArray uniforms);
+
+  /** Make this the active shader for the current GL context.
+   * Also binds any previously-set uniform block buffers, and so must be called
+   * AFTER any needed setUniformBlock() calls.
+   */
   void use();
 
  protected:
