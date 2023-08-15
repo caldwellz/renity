@@ -11,6 +11,7 @@
 #ifndef RENITY_UTILS_SURFACE_UTILS_H_
 #define RENITY_UTILS_SURFACE_UTILS_H_
 
+#include <SDL3/SDL_rect.h>
 #include <SDL3/SDL_rwops.h>
 #include <SDL3/SDL_surface.h>
 
@@ -32,6 +33,35 @@ RENITY_API SDL_Surface *RENITY_LoadPhysSurfaceRW(SDL_RWops *src);
  * @return An SDL_Surface containg the image data, or NULL on failure.
  */
 RENITY_API SDL_Surface *RENITY_LoadPhysSurface(const char *fname);
+
+/**
+ * Flip a Surface horizontally into a new Surface.
+ * Maintains the same color format / component order.
+ * @param surf The SDL_Surface to flip.
+ * @param freeSurf Whether to destroy the original surface.
+ * @returns A new, horizontally-flipped surface, or NULL on failure.
+ */
+RENITY_API SDL_Surface *RENITY_FlipSurfaceHorizontal(SDL_Surface *surf,
+                                                     SDL_bool freeSurf);
+
+/**
+ * Flip a Surface vertically into a new Surface.
+ * @param surf The SDL_Surface to flip.
+ * @param freeSurf Whether to destroy the original surface.
+ * @returns A new, vertically-flipped surface, or NULL on failure.
+ */
+RENITY_API SDL_Surface *RENITY_FlipSurfaceVertical(SDL_Surface *surf,
+                                                   SDL_bool freeSurf);
+
+/**
+ * Rotate a Surface 180 degrees into a new Surface.
+ * Same effect as flipping both horizontally & vertically.
+ * @param surf The SDL_Surface to flip.
+ * @param freeSurf Whether to destroy the original surface.
+ * @returns A new, flipped surface, or NULL on failure.
+ */
+RENITY_API SDL_Surface *RENITY_RotateSurface180(SDL_Surface *surf,
+                                                SDL_bool freeSurf);
 
 /**
  * Enable a Surface's transparency color key using a 2D pixel position.

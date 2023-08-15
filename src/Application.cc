@@ -22,11 +22,10 @@
 #include "InputMapper.h"
 #include "ResourceManager.h"
 #include "Window.h"
+#include "config.h"
 #include "resources/GL_Mesh.h"
 #include "resources/GL_ShaderProgram.h"
-// #include "Sprite.h"
-
-#include "config.h"
+#include "resources/GL_Texture2D.h"
 // #include "gl3.h"
 #include "types.h"
 #include "utils/id_helpers.h"
@@ -280,9 +279,11 @@ RENITY_API int Application::run() {
   GL_Mesh::enableWireframe(false);
   GL_ShaderProgramPtr shader =
       ResourceManager::getActive()->get<GL_ShaderProgram>(
-          "/assets/shaders/uniform.shader");
+          "/assets/shaders/basic_texture.shader");
   GL_MeshPtr mesh =
       ResourceManager::getActive()->get<GL_Mesh>("/assets/meshes/pyramid.mesh");
+  GL_Texture2DPtr texture = ResourceManager::getActive()->get<GL_Texture2D>(
+      "/assets/textures/mushroom.png");
 
   while (keepGoing) {
     // Recalculate displayed FPS every second
@@ -348,8 +349,9 @@ RENITY_API int Application::run() {
     }
 
     // Draw sample shape
-    shader->setUniformBlock("ColorBlock", {red, green, blue, 0.5f});
+    // shader->setUniformBlock("ColorBlock", {red, green, blue, 0.5f});
     shader->use();
+    texture->use();
     mesh->use();
     mesh->draw();
 

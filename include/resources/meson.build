@@ -3,6 +3,7 @@ resources_headers = files([
 , 'GL_Mesh.h'
 , 'GL_Shader.h'
 , 'GL_ShaderProgram.h'
+, 'GL_Texture2D.h'
 , 'GL_VertShader.h'
 , 'StringBuffer.h'
 ])

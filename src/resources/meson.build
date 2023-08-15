@@ -2,5 +2,6 @@ lib_srcs += files([
   'GL_Mesh.cc'
 , 'GL_Shader.cc'
 , 'GL_ShaderProgram.cc'
+, 'GL_Texture2D.cc'
 , 'StringBuffer.cc'
 ])

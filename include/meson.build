@@ -20,6 +20,7 @@ lib_headers = [
   , 'ActionManager.h'
   , 'Dictionary.h'
   , 'Dimension2D.h'
+#  , 'EntityManager.h'
   , 'HashTable.h'
   , 'InputMapper.h'
   , 'Point2D.h'
@@ -27,7 +28,6 @@ lib_headers = [
   , 'Resource.h'
   , 'ResourceManager.h'
   , 'Sprite.h'
-#  , 'Texture.h'
   , 'Window.h'
 ]
 

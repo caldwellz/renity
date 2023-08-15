@@ -1,14 +1,12 @@
 # Tests list
 tests = [
     ['surface_utils', '.c']
-  , ['texture_utils', '.c']
   , ['version', '.c']
   , ['Dictionary', '.cc']
   , ['Dimension2D', '.cc']
   , ['Point2D', '.cc']
   , ['Rect2D', '.cc']
 #  , ['Sprite', '.cc']
-#  , ['Texture', '.cc']
   , ['Window', '.cc']
 ]
 

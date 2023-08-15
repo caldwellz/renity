@@ -3,8 +3,7 @@ utils_headers = [
 , 'physfsrwops.h'
 , 'rwops_utils.h'
 , 'string_helpers.h'
-#, 'surface_utils.h'
-#, 'texture_utils.h'
+, 'surface_utils.h'
 ]
 
 utils_include_subdir = base_include_subdir + '/utils'

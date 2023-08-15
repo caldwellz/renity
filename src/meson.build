@@ -45,7 +45,6 @@ lib_srcs = files([
 , 'InputMapper.cc'
 , 'ResourceManager.cc'
 #, 'Sprite.cc'
-#, 'Texture.cc'
 , 'Window.cc'
 ])
 subdir('3rdparty')
