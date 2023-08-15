@@ -44,7 +44,6 @@ struct Application::Impl {
   Window window;
   ActionManager actionMgr;
   InputMapper inputMapper;
-  ResourceManager resMgr;
   SDL_GLContext context;
   const char *executableName;
   bool headless;
@@ -67,8 +66,8 @@ class ActionLogger : public ActionHandler {
                      return s + " " + toString(arg);
                    },
                    [](void *arg) {
-                     char str[17];
-                     snprintf(str, 11, "void* 0x%llx", (uintptr_t)arg);
+                     char str[25];
+                     snprintf(str, 25, "void* 0x%llx", (uintptr_t)arg);
                      return String(str);
                    },
                    [](const String &arg) { return String("String ") + arg; }},
@@ -180,7 +179,7 @@ RENITY_API bool Application::initialize(bool headless) {
       linked.minor, linked.patch);
 #endif
 
-  // Set up PhysFS
+  // Set up PhysFS - needs to be done before Window resMgr activation
   PHYSFS_init(pimpl_->executableName);
   if (!PHYSFS_isInit()) {
     SDL_SetError("Could not init PhysFS: %s",
@@ -213,7 +212,6 @@ RENITY_API bool Application::initialize(bool headless) {
   PHYSFS_enumerate("/", mountAssetPaks, nullptr);
 
   // PHYSFS_setRoot(PHYSFS_getBaseDir(), "/assets");
-  pimpl_->resMgr.activate();
 
   // Log final search paths in debug mode
 #ifdef RENITY_DEBUG

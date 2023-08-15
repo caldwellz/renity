@@ -369,7 +369,7 @@ RENITY_API bool Window::activate() {
   if (grabbed && grabbed != pimpl_->window)
     SDL_SetWindowGrab(pimpl_->window, SDL_TRUE);
 
-  // Each Texture is bound to the Window it was created under.
+  // GL resources are generally bound to the context they were created under.
   // As such, each Window needs its own ResourceManager context.
   pimpl_->resMgr.activate();
 
@@ -396,8 +396,11 @@ RENITY_API bool Window::update() {
                  SDL_GetError());
     return false;
   }
-  // Only need to clear if we're not overwriting the screen on every frame
+  // Clear the backbuffer if we're not overwriting it on every frame
   // glClear(GL_COLOR_BUFFER_BIT);
+
+  // Reload any shaders, meshes, etc. that have changed on disk
+  pimpl_->resMgr.update();
 
   // Start a new ImGui frame
   ImGui_ImplOpenGL3_NewFrame();

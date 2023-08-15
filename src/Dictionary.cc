@@ -52,7 +52,8 @@ RENITY_API void Dictionary::load(SDL_RWops *src) {
   Sint64 bufSize = RENITY_ReadCharBuffer(src, &buf);
   if (bufSize < 1) {
     SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
-                 "Dictionary::load: Invalid RWops (%li).\n", bufSize);
+                 "Dictionary::load: Invalid RWops (%s, error %li).\n",
+                 src ? "non-null" : "null", bufSize);
     duk_push_bare_object(pimpl_->ctx);
     duk_set_global_object(pimpl_->ctx);
     duk_push_global_object(pimpl_->ctx);

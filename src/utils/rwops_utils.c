@@ -7,13 +7,16 @@
  * the MPL was not distributed with this file, You  *
  * can obtain one at http://mozilla.org/MPL/2.0/.   *
  ***************************************************/
-
 #include "utils/rwops_utils.h"
 
 #include <SDL3/SDL_log.h>
 #include <SDL3/SDL_stdinc.h>
 
 #include "utils/physfsrwops.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif  //__cplusplus
 
 RENITY_API Sint64 RENITY_WriteBufferToPath(const char* dest, const Uint8* src,
                                            Uint32 srcSize) {
@@ -68,7 +71,7 @@ RENITY_API Sint64 RENITY_ReadRawBufferMax(SDL_RWops* src, Uint8** bufOut,
 
   Uint8* buf = (Uint8*)SDL_malloc(srcSize);
   Sint64 readBytes = SDL_RWread(src, buf, srcSize);
-  SDL_DestroyRW(src);
+  SDL_RWclose(src);
   if (readBytes < 1) {
     SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
                  "RENITY_ReadRawBufferMax: Could not read anything from "
@@ -100,3 +103,6 @@ RENITY_API Sint64 RENITY_ReadCharBufferMax(SDL_RWops* src, char** bufOut,
 
   return readBytes;
 }
+#ifdef __cplusplus
+}
+#endif  //__cplusplus

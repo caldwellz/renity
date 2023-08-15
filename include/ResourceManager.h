@@ -50,9 +50,15 @@ class RENITY_API ResourceManager {
 
   /** Activate this ResourceManager.
    * Makes it the "current" manager for any subsequent resource operations.
-   * This is useful for e.g. Textures, which are Window-specific.
+   * This is useful for e.g. GL_Shaders, which are Window-specific.
    */
   void activate();
+
+  /** Update the ResourceManager.
+   * Reloads any cached resources which have changed on disk.
+   * Rendering threads should use this to reload Window-specific resources.
+   */
+  void update();
 
   /** Clear this ResourceManager's contents.
    * Effectively de-activates it and removes everything from the resource cache.
