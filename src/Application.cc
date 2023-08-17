@@ -209,8 +209,7 @@ RENITY_API bool Application::initialize(bool headless) {
     return false;
   }
   PHYSFS_enumerate("/", mountAssetPaks, nullptr);
-
-  // PHYSFS_setRoot(PHYSFS_getBaseDir(), "/assets");
+  // PHYSFS_setRoot(baseDir, "/override");
 
   // Log final search paths in debug mode
 #ifdef RENITY_DEBUG
@@ -270,12 +269,11 @@ RENITY_API int Application::run() {
   Uint32 frames = 0;
   Uint64 lastFrameTime = SDL_GetTicksNS();
   Uint64 fpsTime = 0;
-  float fps = 1.0f, red = 0.0f, green = 0.4f, blue = 0.7f;
+  float fps = 1.0f, red = 0.1f, green = 0.1f, blue = 0.1f;
   // Vector<Sprite> sprites;
   Uint64 spriteCount = 0;
   srand((Uint32)SDL_GetTicksNS());
   // getWindow()->vsync(false);
-  getWindow()->clearColor({0, 0, 200, 255});
   GL_Mesh::enableWireframe(false);
   GL_ShaderProgramPtr shader =
       ResourceManager::getActive()->get<GL_ShaderProgram>(
@@ -350,10 +348,12 @@ RENITY_API int Application::run() {
 
     // Draw sample shape
     // shader->setUniformBlock("ColorBlock", {red, green, blue, 0.5f});
+    getWindow()->clearColor({(Uint8)(red * 255.0f), (Uint8)(green * 255.0f),
+                             (Uint8)(blue * 255.0f), 255});
     shader->use();
     texture->use();
-    mesh->use();
-    mesh->draw();
+    mesh->draw(
+        {0.3, 0.3, -0.3, 0.3, -0.3, -0.2, -0.3, -0.3, 0.1, -0.3, 0.3, 0.2});
 
     // Pump events, then clear them all out after subsystems react to the
     // updates, only listening for quit here. Subsystems should use

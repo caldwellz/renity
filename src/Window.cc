@@ -169,12 +169,20 @@ RENITY_API bool Window::open() {
 
   // Set common GL attributes
   // TODO: Try hardware acceleration first, then log and try without - default
-  // is to allow either one SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
+  // is to allow either one
+  // SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
+  SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
+  SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
+  SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
+  SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
   SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
   SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
   SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
   SDL_GL_SetAttribute(SDL_GL_RETAINED_BACKING, 0);
   // SDL_GL_SetAttribute(SDL_GL_FRAMEBUFFER_SRGB_CAPABLE, 1);
+  // TODO: Add config option to disable MSAA
+  SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
+  SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 16);
 
   // Attempt to use an OpenGL ES 3.0 profile first, with no deprecated functions
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
@@ -306,7 +314,9 @@ RENITY_API bool Window::open() {
   // Watch for window events
   SDL_AddEventWatch(windowEventProcessor, this);
 
-  // Activate the current clear color, then clear the initial buffers
+  // Configure features, activate the clear color, then clear initial buffers
+  glEnable(GL_DEPTH_TEST);
+  // glEnable(GL_STENCIL_TEST);
   clearColor(pimpl_->clearColor);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
@@ -396,8 +406,8 @@ RENITY_API bool Window::update() {
                  SDL_GetError());
     return false;
   }
-  // Clear the backbuffer if we're not overwriting it on every frame
-  // glClear(GL_COLOR_BUFFER_BIT);
+  // TODO: Only clear the color buffer if not overwriting it on every frame
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
   // Reload any shaders, meshes, etc. that have changed on disk
   pimpl_->resMgr.update();

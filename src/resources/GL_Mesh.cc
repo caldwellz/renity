@@ -17,7 +17,6 @@
 constexpr size_t INFO_LOG_SIZE = 256;
 static GLchar infoLog[INFO_LOG_SIZE];
 static GLenum drawMode = GL_TRIANGLES;
-static GLuint activeVao = 0;
 
 namespace renity {
 struct GL_Mesh::Impl {
@@ -25,16 +24,18 @@ struct GL_Mesh::Impl {
     glGenVertexArrays(1, &vao);
     glGenBuffers(1, &vbo);
     glGenBuffers(1, &ebo);
+    glGenBuffers(1, &ibo);
   }
 
   ~Impl() {
     glDeleteVertexArrays(1, &vao);
     glDeleteBuffers(1, &vbo);
     glDeleteBuffers(1, &ebo);
+    glDeleteBuffers(1, &ibo);
   }
 
   bool loaded;
-  GLuint vao, vbo, ebo;
+  GLuint vao, vbo, ebo, ibo;
   Uint32 elementCount;
 };
 
@@ -48,26 +49,19 @@ RENITY_API void GL_Mesh::enableWireframe(bool enable) {
   drawMode = enable ? GL_LINES : GL_TRIANGLES;
 }
 
-RENITY_API void GL_Mesh::use() {
+RENITY_API void GL_Mesh::draw(Vector<float> positions) {
 #ifdef RENITY_DEBUG
   if (!pimpl_->loaded) {
     SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
                 "GL_Mesh::use: Attempted to use unloaded mesh %i", pimpl_->vao);
   }
-  activeVao = pimpl_->vao;
 #endif
   glBindVertexArray(pimpl_->vao);
-}
-
-RENITY_API void GL_Mesh::draw() {
-#ifdef RENITY_DEBUG
-  if (activeVao != pimpl_->vao) {
-    SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-                "GL_Mesh::draw: Attempted to draw mesh %i when %i is in use",
-                pimpl_->vao, activeVao);
-  }
-#endif
-  glDrawElements(drawMode, pimpl_->elementCount, GL_UNSIGNED_INT, nullptr);
+  glBindBuffer(GL_ARRAY_BUFFER, pimpl_->ibo);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(float) * positions.size(),
+               positions.data(), GL_STREAM_DRAW);
+  glDrawElementsInstanced(drawMode, pimpl_->elementCount, GL_UNSIGNED_INT,
+                          nullptr, positions.size() / 3);
 }
 
 RENITY_API void GL_Mesh::load(SDL_RWops *src) {
@@ -169,11 +163,17 @@ RENITY_API void GL_Mesh::load(SDL_RWops *src) {
   // Configure and enable the interpretation of the vertex and UV attributes
   // glVertexAttribPointer also "binds" the VBO/EBO to VAO attribute(s)
   // For a better explanation, see https://stackoverflow.com/a/59892245
+  glEnableVertexAttribArray(0);
+  glEnableVertexAttribArray(1);
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), 0);
   glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float),
                         (const void *)vertSize);
-  glEnableVertexAttribArray(0);
-  glEnableVertexAttribArray(1);
+
+  // Configure the instance positions buffer that will be filled every draw call
+  glBindBuffer(GL_ARRAY_BUFFER, pimpl_->ibo);
+  glEnableVertexAttribArray(2);
+  glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), 0);
+  glVertexAttribDivisor(2, 1);
 
   pimpl_->elementCount = indCount;
   pimpl_->loaded = true;

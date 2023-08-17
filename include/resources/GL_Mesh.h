@@ -23,13 +23,11 @@ class RENITY_API GL_Mesh : public Resource {
    */
   static void enableWireframe(bool enable = true);
 
-  /** Make this the active mesh (VBO) for the current GL context. */
-  void use();
-
   /** Draw the mesh triangles using the current shader program.
-   * Must call use() first to bind the mesh.
+   * Changes the currently-bound VAO/VBOs and does not restore them.
+   * \param positions An array of (X,Y,Z) coordinates to draw mesh instances at.
    */
-  void draw();
+  void draw(Vector<float> positions);
 
  protected:
   friend class ResourceManager;
