@@ -36,7 +36,8 @@ using Id = Uint32;
 using ActionCategoryId = Id;
 using ActionId = Id;
 using ChunkId = Id;
-using EntityId = Id;
+using EntityId = Uint64;
+using TileId = Id;
 using Timestamp = Uint64;
 
 template <class Base, class Derived>

@@ -22,6 +22,8 @@ constexpr size_t INFO_LOG_SIZE = 256;
 static GLchar infoLog[INFO_LOG_SIZE];
 
 namespace renity {
+GL_ShaderProgram* currentGLShaderProgram = nullptr;
+
 struct GL_ShaderProgram::Impl {
   explicit Impl() : dirty(false), valid(false), nextBindingPoint(1) {
     shaderProgram = glCreateProgram();
@@ -110,22 +112,48 @@ RENITY_API GL_ShaderProgram::GL_ShaderProgram() { pimpl_ = new Impl(); }
 
 RENITY_API GL_ShaderProgram::~GL_ShaderProgram() { delete pimpl_; }
 
+RENITY_API void GL_ShaderProgram::activate() {
+  currentGLShaderProgram = this;
+  if (pimpl_->dirty) {
+    pimpl_->linkProgram();
+  }
+#ifdef RENITY_DEBUG
+  if (!pimpl_->valid) {
+    SDL_LogVerbose(
+        SDL_LOG_CATEGORY_APPLICATION,
+        "GL_ShaderProgram::use: Attempted to use invalid shader program %i",
+        pimpl_->shaderProgram);
+  }
+#endif
+  glUseProgram(pimpl_->shaderProgram);
+  for (GLuint bindPoint = 1; bindPoint < pimpl_->nextBindingPoint;
+       ++bindPoint) {
+    glBindBufferBase(GL_UNIFORM_BUFFER, bindPoint,
+                     pimpl_->uniformBuffers[bindPoint]);
+  }
+}
+
+RENITY_API GL_ShaderProgram* GL_ShaderProgram::getActive() {
+  return currentGLShaderProgram;
+}
+
 static void flagReload(void* userdata) {
   GL_ShaderProgram::Impl* pimpl_ =
       static_cast<GL_ShaderProgram::Impl*>(userdata);
   pimpl_->dirty = true;
 }
 
+template <typename T>
 RENITY_API bool GL_ShaderProgram::setUniformBlock(String blockName,
-                                                  UniformArray uniforms) {
+                                                  Vector<T> uniforms) {
 #ifdef RENITY_DEBUG
   // Sanity checks
   if (!pimpl_->valid) return false;
-  if (uniforms.size() > MAX_UNIFORM_BLOCK_FLOATS) {
+  if (uniforms.size() > MAX_UNIFORM_BLOCK_ITEMS) {
     SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
                  "GL_ShaderProgram::setUniformBlock: Only %u uniforms are "
                  "allowed, but %li were passed",
-                 MAX_UNIFORM_BLOCK_FLOATS, uniforms.size());
+                 MAX_UNIFORM_BLOCK_ITEMS, uniforms.size());
     return false;
   }
 #endif
@@ -160,32 +188,19 @@ RENITY_API bool GL_ShaderProgram::setUniformBlock(String blockName,
   // Bind and fill the uniform buffer
   GLuint bindPoint = pimpl_->bindingPoints.get(blockName);
   glBindBuffer(GL_UNIFORM_BUFFER, pimpl_->uniformBuffers[bindPoint]);
-  glBufferData(GL_UNIFORM_BUFFER, sizeof(float) * uniforms.size(),
-               uniforms.data(), GL_DYNAMIC_DRAW);
+  glBufferData(GL_UNIFORM_BUFFER, sizeof(T) * uniforms.size(), uniforms.data(),
+               GL_DYNAMIC_DRAW);
   // No need to UNbind the uniform buffer, since it won't associate with a VAO
 
   return true;
 }
-
-RENITY_API void GL_ShaderProgram::use() {
-  if (pimpl_->dirty) {
-    pimpl_->linkProgram();
-  }
-#ifdef RENITY_DEBUG
-  if (!pimpl_->valid) {
-    SDL_LogVerbose(
-        SDL_LOG_CATEGORY_APPLICATION,
-        "GL_ShaderProgram::use: Attempted to use invalid shader program %i",
-        pimpl_->shaderProgram);
-  }
-#endif
-  glUseProgram(pimpl_->shaderProgram);
-  for (GLuint bindPoint = 1; bindPoint < pimpl_->nextBindingPoint;
-       ++bindPoint) {
-    glBindBufferBase(GL_UNIFORM_BUFFER, bindPoint,
-                     pimpl_->uniformBuffers[bindPoint]);
-  }
-}
+// Supported uniform type specializations
+template RENITY_API bool GL_ShaderProgram::setUniformBlock(
+    String blockName, Vector<float> uniforms);
+template RENITY_API bool GL_ShaderProgram::setUniformBlock(
+    String blockName, Vector<Sint32> uniforms);
+template RENITY_API bool GL_ShaderProgram::setUniformBlock(
+    String blockName, Vector<unsigned int> uniforms);
 
 RENITY_API void GL_ShaderProgram::load(SDL_RWops* src) {
   const char *vertPath = "<undefined>", *fragPath = vertPath;

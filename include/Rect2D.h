@@ -30,7 +30,7 @@ class Rect2D : public Dimension2D<T>, public Point2D<T> {
    * coordinate. \param width The initial width. \param height The initial
    * height.
    */
-  Rect2D(const T &x, const T &y, const T &width, const T &height)
+  Rect2D(const T x, const T y, const T width, const T height)
       : Dimension2D<T>(width, height), Point2D<T>(x, y) {}
 
   /** Get the position of the rectangle.

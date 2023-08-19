@@ -33,6 +33,12 @@ inline String toLower(String str) {
   return str;
 }
 
+/** Does a case-sensitive comparison between prefix and the beginning of str. */
+inline bool beginsWith(const String str, const String prefix) {
+  return str.size() >= prefix.size() &&
+         str.compare(0, prefix.size(), prefix) == 0;
+}
+
 /** Does a case-sensitive comparison between suffix and the end of str. */
 inline bool endsWith(const String str, const String suffix) {
   return str.size() >= suffix.size() &&

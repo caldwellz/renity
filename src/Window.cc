@@ -70,6 +70,7 @@ RENITY_API Window::~Window() {
 // TODO: Make this thread-safe, probably via a mutex in close()
 int windowEventProcessor(void *userdata, SDL_Event *event) {
   Window *w = static_cast<Window *>(userdata);
+  Uint32 width, height;
   const bool windowEvent = event->type >= SDL_EVENT_WINDOW_FIRST &&
                            event->type <= SDL_EVENT_WINDOW_LAST;
   const bool currentWindowEvent =
@@ -120,7 +121,17 @@ int windowEventProcessor(void *userdata, SDL_Event *event) {
                    "actual pixels.\n",
                    event->window.data1, event->window.data2);
       // TODO: Move this to a window event handler in the renderer
-      glViewport(0, 0, event->window.data1, event->window.data2);
+      // This is a crude hack to avoid aspect fiddling in the shader
+      width = event->window.data1;
+      height = event->window.data2;
+      /*
+      if (width > height) {
+        glViewport((width - height) / 2, 0, height, height);
+      } else {
+        glViewport(0, (height - width) / 2, width, width);
+      }
+      */
+      glViewport(0, 0, width, height);
       ImGui_ImplSDL3_ProcessEvent(event);
       break;
     // A bunch of event types that we know we don't currently care about
@@ -315,6 +326,11 @@ RENITY_API bool Window::open() {
   SDL_AddEventWatch(windowEventProcessor, this);
 
   // Configure features, activate the clear color, then clear initial buffers
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  // Point flags are only available in desktop GL; in ES3 they're always enabled
+  // glEnable(GL_POINT_SPRITE);
+  // glEnable(GL_PROGRAM_POINT_SIZE);
   glEnable(GL_DEPTH_TEST);
   // glEnable(GL_STENCIL_TEST);
   clearColor(pimpl_->clearColor);

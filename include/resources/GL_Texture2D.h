@@ -49,7 +49,7 @@ class RENITY_API GL_Texture2D : public Resource {
    * \returns A Dimension2D containing the texture's current size in pixels \
    * if the texture is valid; (0, 0) otherwise;
    */
-  Dimension2Di getSize() const;
+  Dimension2Du32 getSize() const;
 
  private:
   struct Impl;

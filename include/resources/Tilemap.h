@@ -1,5 +1,5 @@
 /****************************************************
- * GL_Mesh.h: GL vertex buffer resource             *
+ * Tilemap.h: Tilemap resource                      *
  * Copyright (C) 2023 by Zach Caldwell              *
  ****************************************************
  * This Source Code Form is subject to the terms of *
@@ -9,30 +9,22 @@
  ***************************************************/
 #pragma once
 
+#include "Point2D.h"
 #include "Resource.h"
 #include "types.h"
 
 namespace renity {
-struct MeshPosition {
-  float x, y, z;
-  Uint32 u, v;
-};
+// constexpr Uint8 MAX_MAP_LAYERS = 64;
 
-class RENITY_API GL_Mesh : public Resource {
+class RENITY_API Tilemap : public Resource {
  public:
-  GL_Mesh();
-  ~GL_Mesh();
+  Tilemap();
+  ~Tilemap();
 
-  /** Enable or disable wireframe drawing mode for EVERY mesh.
-   * It's disabled by default (drawing in "fill" mode).
+  /** Draw the map using a square mesh and special shader program.
+   * \param position A top-left-relative screen location to draw at, in pixels.
    */
-  static void enableWireframe(bool enable = true);
-
-  /** Draw mesh instances using the current texture and shader program.
-   * Changes the currently-bound VAO/VBOs and does not restore them.
-   * \param instances A vector of MeshPosition structures to draw.
-   */
-  void draw(const Vector<MeshPosition>& instances);
+  void draw(const Point2Di32 position);
 
  protected:
   friend class ResourceManager;
@@ -42,5 +34,5 @@ class RENITY_API GL_Mesh : public Resource {
   struct Impl;
   Impl* pimpl_;
 };
-using GL_MeshPtr = SharedPtr<GL_Mesh>;
+using TilemapPtr = SharedPtr<Tilemap>;
 }  // namespace renity

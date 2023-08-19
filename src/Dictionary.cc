@@ -261,7 +261,7 @@ RENITY_API void Dictionary::unwind(size_t depth) {
     // Clear the stack down to the base object, unwinding all selects
     duk_set_top(pimpl_->ctx, 1);
   } else {
-    duk_set_top(pimpl_->ctx, -depth);
+    duk_set_top(pimpl_->ctx, -(duk_idx_t)depth);
   }
 }
 
@@ -526,13 +526,39 @@ RENITY_API void *Dictionary::getContext() { return pimpl_->ctx; }
           "Dictionary::push: Selected edge is not an object or array");       \
       return false;                                                           \
     }                                                                         \
-    duk_size_t index = duk_get_length(pimpl_->ctx, -1);                       \
+    duk_uarridx_t index = (duk_uarridx_t)duk_get_length(pimpl_->ctx, -1);     \
     SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,                              \
                    "Dictionary::push: [%lu]=" printSpec "\n", index,          \
                    val printAdd);                                             \
     duk_require_stack(pimpl_->ctx, 1);                                        \
     duk_push_##dukExt(pimpl_->ctx, val);                                      \
     return !!duk_put_prop_index(pimpl_->ctx, -2, index);                      \
+  }                                                                           \
+                                                                              \
+  template <>                                                                 \
+  RENITY_API bool Dictionary::pop<T>(T * valOut) {                            \
+    if (!duk_is_object(pimpl_->ctx, -1)) {                                    \
+      SDL_LogError(                                                           \
+          SDL_LOG_CATEGORY_APPLICATION,                                       \
+          "Dictionary::pop: Selected edge is not an object or array");        \
+      return false;                                                           \
+    }                                                                         \
+    if (!duk_get_prop_index(pimpl_->ctx, -1, -1) ||                           \
+        !duk_is_##dukInt(pimpl_->ctx, -1)) {                                  \
+      SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,                              \
+                   "Dictionary::pop: Correct-type value not found at end of " \
+                   "current selection");                                      \
+      duk_pop(pimpl_->ctx);                                                   \
+      return false;                                                           \
+    }                                                                         \
+    if (valOut) {                                                             \
+      *valOut = (T)duk_get_##dukExt(pimpl_->ctx, -1);                         \
+      SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,                            \
+                     "Dictionary::pop: " printSpec "\n", *valOut printAdd);   \
+    }                                                                         \
+    duk_pop(pimpl_->ctx);                                                     \
+    duk_del_prop_index(pimpl_->ctx, -1, -1);                                  \
+    return true;                                                              \
   }                                                                           \
                                                                               \
   template <>                                                                 \
@@ -575,9 +601,11 @@ DICT_IMPL(const char *, string, string, "%s")
 DICT_IMPL(Uint8, uint, number, "%u")
 DICT_IMPL(Uint16, uint, number, "%u")
 DICT_IMPL(Uint32, uint, number, "%u")
+DICT_IMPL(Uint64, uint, number, "%u")
 DICT_IMPL(Sint8, int, number, "%i")
 DICT_IMPL(Sint16, int, number, "%i")
 DICT_IMPL(Sint32, int, number, "%i")
+DICT_IMPL(Sint64, int, number, "%li")
 DICT_IMPL(float, number, number, "%f")
 DICT_IMPL(double, number, number, "%f")
 }  // namespace renity

@@ -49,7 +49,7 @@ RENITY_API void GL_Mesh::enableWireframe(bool enable) {
   drawMode = enable ? GL_LINES : GL_TRIANGLES;
 }
 
-RENITY_API void GL_Mesh::draw(Vector<float> positions) {
+RENITY_API void GL_Mesh::draw(const Vector<MeshPosition> &instances) {
 #ifdef RENITY_DEBUG
   if (!pimpl_->loaded) {
     SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
@@ -58,10 +58,10 @@ RENITY_API void GL_Mesh::draw(Vector<float> positions) {
 #endif
   glBindVertexArray(pimpl_->vao);
   glBindBuffer(GL_ARRAY_BUFFER, pimpl_->ibo);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(float) * positions.size(),
-               positions.data(), GL_STREAM_DRAW);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(MeshPosition) * instances.size(),
+               instances.data(), GL_STREAM_DRAW);
   glDrawElementsInstanced(drawMode, pimpl_->elementCount, GL_UNSIGNED_INT,
-                          nullptr, positions.size() / 3);
+                          nullptr, instances.size());
 }
 
 RENITY_API void GL_Mesh::load(SDL_RWops *src) {
@@ -163,17 +163,21 @@ RENITY_API void GL_Mesh::load(SDL_RWops *src) {
   // Configure and enable the interpretation of the vertex and UV attributes
   // glVertexAttribPointer also "binds" the VBO/EBO to VAO attribute(s)
   // For a better explanation, see https://stackoverflow.com/a/59892245
-  glEnableVertexAttribArray(0);
-  glEnableVertexAttribArray(1);
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), 0);
+  glEnableVertexAttribArray(0);
   glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float),
                         (const void *)vertSize);
+  glEnableVertexAttribArray(1);
 
-  // Configure the instance positions buffer that will be filled every draw call
+  // Configure the instances buffer that will be filled every draw call
   glBindBuffer(GL_ARRAY_BUFFER, pimpl_->ibo);
+  glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(MeshPosition), 0);
   glEnableVertexAttribArray(2);
-  glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), 0);
   glVertexAttribDivisor(2, 1);
+  glVertexAttribIPointer(3, 2, GL_UNSIGNED_INT, sizeof(MeshPosition),
+                         (void *)(offsetof(MeshPosition, u)));
+  glEnableVertexAttribArray(3);
+  glVertexAttribDivisor(3, 1);
 
   pimpl_->elementCount = indCount;
   pimpl_->loaded = true;

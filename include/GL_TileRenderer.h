@@ -1,5 +1,5 @@
 /****************************************************
- * GL_Mesh.h: GL vertex buffer resource             *
+ * GL_TileRenderer.h: GL tile instance renderer     *
  * Copyright (C) 2023 by Zach Caldwell              *
  ****************************************************
  * This Source Code Form is subject to the terms of *
@@ -9,38 +9,31 @@
  ***************************************************/
 #pragma once
 
-#include "Resource.h"
 #include "types.h"
 
 namespace renity {
-struct MeshPosition {
-  float x, y, z;
-  Uint32 u, v;
+struct TileInstance {
+  Uint32 x, y, z, u, v;
 };
 
-class RENITY_API GL_Mesh : public Resource {
+class RENITY_API GL_TileRenderer {
  public:
-  GL_Mesh();
-  ~GL_Mesh();
+  GL_TileRenderer();
+  ~GL_TileRenderer();
 
-  /** Enable or disable wireframe drawing mode for EVERY mesh.
+  /** Enable or disable wireframe drawing mode for EVERY tile.
    * It's disabled by default (drawing in "fill" mode).
    */
   static void enableWireframe(bool enable = true);
 
-  /** Draw mesh instances using the current texture and shader program.
+  /** Draw a tile list using the current texture and shader program.
    * Changes the currently-bound VAO/VBOs and does not restore them.
-   * \param instances A vector of MeshPosition structures to draw.
+   * \param instances A vector of TileInstance structures to draw.
    */
-  void draw(const Vector<MeshPosition>& instances);
-
- protected:
-  friend class ResourceManager;
-  void load(SDL_RWops* src);
+  void draw(const Vector<TileInstance>& instances);
 
  private:
   struct Impl;
   Impl* pimpl_;
 };
-using GL_MeshPtr = SharedPtr<GL_Mesh>;
 }  // namespace renity

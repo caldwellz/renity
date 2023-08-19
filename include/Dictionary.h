@@ -146,6 +146,13 @@ class RENITY_API Dictionary : public Resource {
   template <typename T>
   bool push(T val);
 
+  /** Pop a value of the given type from the end of the selected array.
+   * @param valOut Where to store the value, if one exists. Can be a nullptr.
+   * @return True if an array value existed and was removed, false otherwise.
+   */
+  template <typename T>
+  bool pop(T *valOut);
+
   /** Store a Property value of the given type.
    * @param key The key to store the value under.
    * @param val The value to store. Will overwrite a previous value of any type.

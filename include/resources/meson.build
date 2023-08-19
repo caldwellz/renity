@@ -6,6 +6,8 @@ resources_headers = files([
 , 'GL_Texture2D.h'
 , 'GL_VertShader.h'
 , 'StringBuffer.h'
+, 'Tilemap.h'
+, 'Tileset.h'
 ])
 
 resources_include_subdir = base_include_subdir / 'resources'

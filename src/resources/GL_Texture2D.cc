@@ -36,7 +36,7 @@ struct GL_Texture2D::Impl {
 
   GLuint tex;
   GLenum texUnit;
-  Dimension2Di size;
+  Dimension2Du32 size;
 };
 
 RENITY_API GL_Texture2D::GL_Texture2D() { pimpl_ = new Impl(); }
@@ -96,7 +96,7 @@ RENITY_API void GL_Texture2D::load(SDL_RWops *src) {
   SDL_DestroySurface(rgbaSurf);
   glGenerateMipmap(GL_TEXTURE_2D);
   SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
-                 "GL_Texture2D::load: Successfully buffered %ix%i texture",
+                 "GL_Texture2D::load: Successfully buffered %ux%u texture",
                  pimpl_->size.width(), pimpl_->size.height());
 }
 
@@ -126,5 +126,5 @@ RENITY_API void GL_Texture2D::use() {
   // glUniform1i(glGetUniformLocation(shaderProgram, "myTexture"), 0);
 }
 
-RENITY_API Dimension2Di GL_Texture2D::getSize() const { return pimpl_->size; }
+RENITY_API Dimension2Du32 GL_Texture2D::getSize() const { return pimpl_->size; }
 }  // namespace renity

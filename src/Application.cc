@@ -19,13 +19,14 @@
 #include "3rdparty/imgui/imgui.h"
 #include "ActionHandler.h"
 #include "ActionManager.h"
+#include "GL_TileRenderer.h"
 #include "InputMapper.h"
 #include "ResourceManager.h"
 #include "Window.h"
 #include "config.h"
-#include "resources/GL_Mesh.h"
 #include "resources/GL_ShaderProgram.h"
-#include "resources/GL_Texture2D.h"
+#include "resources/Tilemap.h"
+#include "resources/Tileset.h"
 // #include "gl3.h"
 #include "types.h"
 #include "utils/id_helpers.h"
@@ -76,14 +77,15 @@ class ActionLogger : public ActionHandler {
   }
 
   void handleAction(const ActionCategoryId categoryId, const Action *action) {
-    static ActionId discardedInput =
-        ActionManager::getActive()->assignCategory("DebugIgnore", "Input");
+    static ActionId debugIgnore =
+        ActionManager::getActive()->assignCategory("Ignore", "Debug");
     static ActionId changeInput = getId("InputMappingChange");
     static ActionId unmappedButton = getId("UnmappedButtonInput");
     static ActionId unmappedAxis = getId("UnmappedAxisInput");
+    if (action->getId() == debugIgnore) return;
     if (action->getId() == unmappedButton || action->getId() == unmappedAxis) {
       ActionManager::getActive()->post(
-          Action(changeInput, {discardedInput, action->getData(0)}));
+          Action(changeInput, {debugIgnore, action->getData(0)}));
       SDL_LogDebug(
           SDL_LOG_CATEGORY_APPLICATION,
           "ActionLogger::handleAction: REGISTERING INPUT categoryId:0x%08x, "
@@ -125,6 +127,7 @@ RENITY_API Application::Application(int argc, char *argv[]) {
   // Register an Action logger for various categories
   ActionHandlerPtr actLogger(new ActionLogger);
   pimpl_->actionMgr.subscribe(actLogger, "Window");
+  pimpl_->actionMgr.subscribe(actLogger, "Debug");
   pimpl_->actionMgr.subscribe(actLogger, "Input");
   pimpl_->actionMgr.subscribe(actLogger, "InputChange");
 #endif
@@ -264,24 +267,22 @@ RENITY_API bool Application::initialize(bool headless) {
 
 RENITY_API int Application::run() {
   SDL_Event event;
-  bool keepGoing = true;
-  bool show_demo_window = false;
+  bool keepGoing = true, show_demo_window = false, vsync = true,
+       vsyncLast = true, wireframe = false;
   Uint32 frames = 0;
   Uint64 lastFrameTime = SDL_GetTicksNS();
   Uint64 fpsTime = 0;
-  float fps = 1.0f, red = 0.1f, green = 0.1f, blue = 0.1f;
+  int clearColor[3] = {32, 32, 32};
+  Sint32 mapOffset[2] = {0, 0};
+  float fps = 1.0f, scale = 1.0f, width, height;
   // Vector<Sprite> sprites;
   Uint64 spriteCount = 0;
   srand((Uint32)SDL_GetTicksNS());
-  // getWindow()->vsync(false);
-  GL_Mesh::enableWireframe(false);
   GL_ShaderProgramPtr shader =
       ResourceManager::getActive()->get<GL_ShaderProgram>(
-          "/assets/shaders/basic_texture.shader");
-  GL_MeshPtr mesh =
-      ResourceManager::getActive()->get<GL_Mesh>("/assets/meshes/pyramid.mesh");
-  GL_Texture2DPtr texture = ResourceManager::getActive()->get<GL_Texture2D>(
-      "/assets/textures/mushroom.png");
+          "/assets/shaders/tile2d.shader");
+  TilemapPtr map =
+      ResourceManager::getActive()->get<Tilemap>("/assets/maps/test1.tmj");
 
   while (keepGoing) {
     // Recalculate displayed FPS every second
@@ -318,42 +319,54 @@ RENITY_API int Application::run() {
       s.draw();
     }
     */
+    width = (float)pimpl_->window.size().width();
+    height = (float)pimpl_->window.size().height();
+
     // ImGUI demo
     if (show_demo_window) ImGui::ShowDemoWindow(&show_demo_window);
 
     // 2. Show a simple window that we create ourselves. We use a Begin/End pair
     // to create a named window.
     {
-      ImGui::Begin("Hello, world!");  // Create a window called "Hello, world!"
-                                      // and append into it.
+      ImGui::PushStyleColor(ImGuiCol_TitleBgActive,
+                            IM_COL32(clearColor[0] / 2, clearColor[1] / 2,
+                                     clearColor[2] / 2, 128));
+      ImGui::SetNextWindowSize(ImVec2(0, 240));
+      ImGui::Begin("Settings");
 
       // ImGui::Text("Rendering %llu sprites.", spriteCount);
-      ImGui::Checkbox(
-          "Demo Window",
-          &show_demo_window);  // Edit bools storing our window open/close state
-
-      ImGui::SliderFloat("Red", &red, 0.0f, 1.0f, "%.3f",
-                         ImGuiSliderFlags_AlwaysClamp);
-      ImGui::SliderFloat("Green", &green, 0.0f, 1.0f, "%.3f",
-                         ImGuiSliderFlags_AlwaysClamp);
-      ImGui::SliderFloat("Blue", &blue, 0.0f, 1.0f, "%.3f",
-                         ImGuiSliderFlags_AlwaysClamp);
-      // ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3
-      // floats representing a color
+      ImGui::Checkbox("Demo Window", &show_demo_window);
+      ImGui::Checkbox("Enable VSync", &vsync);
+      ImGui::Checkbox("Enable wireframe", &wireframe);
+      // ImGui::ColorEdit3("Background color", clearColor);
+      ImGui::SliderInt3("Background color", clearColor, 0, 255, "#%02X",
+                        ImGuiSliderFlags_AlwaysClamp);
+      ImGui::SliderFloat("Window width", &width, 1.0f, 2048.0f, "%.0f");
+      ImGui::SliderFloat("Window height", &height, 1.0f, 2048.0f, "%.0f");
+      ImGui::SliderFloat("Map scale", &scale, 0.1f, 8.0f, "%.1f");
+      ImGui::SliderInt2("Map offset", mapOffset, -1024, 1024);
 
       ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / fps,
                   fps);
       ImGui::End();
+      ImGui::PopStyleColor();
+    }
+    // Set wireframe mode and toggle VSync if requested
+    GL_TileRenderer::enableWireframe(wireframe);
+    if (vsync != vsyncLast) {
+      getWindow()->vsync(vsync);
+      vsyncLast = vsync;
     }
 
-    // Draw sample shape
-    // shader->setUniformBlock("ColorBlock", {red, green, blue, 0.5f});
-    getWindow()->clearColor({(Uint8)(red * 255.0f), (Uint8)(green * 255.0f),
-                             (Uint8)(blue * 255.0f), 255});
-    shader->use();
-    texture->use();
-    mesh->draw(
-        {0.3, 0.3, -0.3, 0.3, -0.3, -0.2, -0.3, -0.3, 0.1, -0.3, 0.3, 0.2});
+    // Draw sample map
+    getWindow()->clearColor({(Uint8)clearColor[0], (Uint8)clearColor[1],
+                             (Uint8)clearColor[2], 255});
+    // TODO: Replace with a window-size action listener in TileRenderer
+    // Move scale there too as a settable / action listener
+    shader->activate();
+    GL_ShaderProgram::getActive()->setUniformBlock<float>(
+        "ViewParams", {width, height, scale});
+    map->draw({mapOffset[0], mapOffset[1]});
 
     // Pump events, then clear them all out after subsystems react to the
     // updates, only listening for quit here. Subsystems should use

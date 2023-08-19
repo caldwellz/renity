@@ -21,6 +21,8 @@ lib_headers = [
   , 'Dictionary.h'
   , 'Dimension2D.h'
 #  , 'EntityManager.h'
+  , 'GL_PointRenderer.h'
+  , 'GL_TileRenderer.h'
   , 'HashTable.h'
   , 'InputMapper.h'
   , 'Point2D.h'

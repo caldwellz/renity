@@ -42,6 +42,8 @@ lib_srcs = files([
 , 'Application.cc'
 , 'Dictionary.cc'
 #, 'EntityManager.cc'
+, 'GL_PointRenderer.cc'
+, 'GL_TileRenderer.cc'
 , 'InputMapper.cc'
 , 'ResourceManager.cc'
 #, 'Sprite.cc'
