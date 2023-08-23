@@ -9,6 +9,7 @@
  ***************************************************/
 #include "GL_TileRenderer.h"
 
+#include "ResourceManager.h"
 #include "gl3.h"
 
 namespace renity {
@@ -19,6 +20,8 @@ struct GL_TileRenderer::Impl {
     glGenVertexArrays(1, &vao);
     glGenBuffers(1, &vbo);
     glGenBuffers(1, &ibo);
+    shader = ResourceManager::getActive()->get<GL_ShaderProgram>(
+        "/assets/shaders/tile2d.shader");
   }
 
   ~Impl() {
@@ -28,6 +31,7 @@ struct GL_TileRenderer::Impl {
   }
 
   GLuint vao, vbo, ibo;
+  GL_ShaderProgramPtr shader;
 };
 
 RENITY_API GL_TileRenderer::GL_TileRenderer() {
@@ -77,7 +81,12 @@ RENITY_API void GL_TileRenderer::enableWireframe(bool enable) {
   drawMode = enable ? GL_LINES : GL_TRIANGLES;
 }
 
+RENITY_API GL_ShaderProgramPtr GL_TileRenderer::getShader() {
+  return pimpl_->shader;
+}
+
 RENITY_API void GL_TileRenderer::draw(const Vector<TileInstance> &instances) {
+  pimpl_->shader->activate();
   glBindVertexArray(pimpl_->vao);
   // TODO: Try removing this, since the VAO should bind it
   glBindBuffer(GL_ARRAY_BUFFER, pimpl_->ibo);

@@ -527,12 +527,17 @@ RENITY_API void Window::position(const Point2Di32 &new_pos) {
     SDL_SetWindowPosition(pimpl_->window, new_pos.x(), new_pos.y());
 }
 
-RENITY_API void Window::centerPosition() {
+RENITY_API void Window::centerOnDisplay() {
   pimpl_->position.x(SDL_WINDOWPOS_CENTERED);
   pimpl_->position.y(SDL_WINDOWPOS_CENTERED);
   if (pimpl_->window)
     SDL_SetWindowPosition(pimpl_->window, SDL_WINDOWPOS_CENTERED,
                           SDL_WINDOWPOS_CENTERED);
+}
+
+RENITY_API Point2Di32 Window::getCenterPoint() const {
+  Dimension2Di32 dims = sizeInPixels();
+  return Point2Di32(dims.width() / 2, dims.height() / 2);
 }
 
 RENITY_API Dimension2Di32 Window::size() const {

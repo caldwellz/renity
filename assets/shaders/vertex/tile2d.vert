@@ -32,11 +32,17 @@ layout (std140) uniform MapDetails
 
 void main()
 {
-  vec2 pixelScale = scale / viewSize;
-  vec3 normalizedMapOffset = vec3(vec2(-1.0f, 1.0f - (mapSize.y * pixelScale.y)) + (mapPosition / viewSize), 0.0f);
-  vec3 normalizedTilePos = vec3(vec2(tilePos.xy) * pixelScale, float(tilePos.z) / mapDepthRange);
+  vec2 pixelScale = (2.0f * scale) / viewSize;
   vec3 normalizedVertPos = vec3((vertPos.xy + 1.0f) / 2.0f * pixelScale * tileSize, vertPos.z);
-  gl_Position = vec4(normalizedVertPos + normalizedTilePos + normalizedMapOffset, 1.0f);
+  vec3 normalizedTilePos = vec3(vec2(tilePos.xy) * pixelScale, float(tilePos.z) / mapDepthRange);
+  vec3 normalizedMapPos = vec3(0.0f, -mapSize.y * pixelScale.y, 0.0f);
+  vec3 normalizedCameraPos = vec3(mapPosition * pixelScale, 0.0f);
+  gl_Position = vec4(
+      normalizedVertPos
+    + normalizedTilePos
+    + normalizedMapPos
+    + normalizedCameraPos
+    , 1.0f);
 
   vec2 tilesetScale = 1.0f / tilesetSize;
   fragTexCoord = (vec2(tileUv) * tilesetScale) + (vertUv * tilesetScale * tileSize);

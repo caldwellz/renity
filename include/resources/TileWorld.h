@@ -1,5 +1,5 @@
 /****************************************************
- * Tilemap.h: Tilemap resource                      *
+ * TileWorld.h: Tile world resource                 *
  * Copyright (C) 2023 by Zach Caldwell              *
  ****************************************************
  * This Source Code Form is subject to the terms of *
@@ -9,23 +9,21 @@
  ***************************************************/
 #pragma once
 
-#include "GL_TileRenderer.h"
 #include "Point2D.h"
 #include "Resource.h"
 #include "types.h"
 
 namespace renity {
-// constexpr Uint8 MAX_MAP_LAYERS = 64;
-
-class RENITY_API Tilemap : public Resource {
+class RENITY_API TileWorld : public Resource {
  public:
-  Tilemap();
-  ~Tilemap();
+  TileWorld();
+  ~TileWorld();
 
-  /** Draw the map at a specific position using a given tile renderer.
-   * \param position A top-left-relative screen location to draw at, in pixels.
+  /** Draw the world at the given camera position.
+   * \param cameraPos Top-left-relative world coordinates to center and draw at.
+   * \param scale The scale to draw at, relative to the original tile size.
    */
-  void draw(GL_TileRenderer& renderer, const Point2Di32 position);
+  void draw(const Point2Di32 cameraPos, float scale = 1.0f);
 
  protected:
   friend class ResourceManager;
@@ -35,5 +33,5 @@ class RENITY_API Tilemap : public Resource {
   struct Impl;
   Impl* pimpl_;
 };
-using TilemapPtr = SharedPtr<Tilemap>;
+using TileWorldPtr = SharedPtr<TileWorld>;
 }  // namespace renity

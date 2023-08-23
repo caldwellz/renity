@@ -6,4 +6,5 @@ lib_srcs += files([
 , 'StringBuffer.cc'
 , 'Tilemap.cc'
 , 'Tileset.cc'
+, 'TileWorld.cc'
 ])

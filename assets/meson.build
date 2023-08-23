@@ -1,6 +1,8 @@
 asset_packages = {
   'maps': files([
     'maps/test1.tmj'
+  , 'maps/test2.tmj'
+  , 'maps/test.world'
   ])
 , 'meshes': files([
     'meshes/pyramid.mesh'
@@ -27,7 +29,9 @@ asset_packages = {
 #   , 'textures/mushroom.png'
 #   ])
 , 'tilesets': files([
-    'tilesets/test1.tsj'
-  , 'tilesets/sheets/test1.png'
+    'tilesets/sheets/test1.png'
+  , 'tilesets/sheets/test2.png'
+  , 'tilesets/test1.tsj'
+  , 'tilesets/test2.tsj'
   ])
 }

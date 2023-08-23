@@ -13,14 +13,12 @@
 // #include <SDL3/SDL_pixels.h>
 #include <SDL3/SDL_stdinc.h>
 // #include <SDL3/SDL_surface.h>
-#include <cmath>
 
 #include "Dictionary.h"
 #include "Dimension2D.h"
 #include "GL_TileRenderer.h"
 #include "ResourceManager.h"
 #include "gl3.h"
-#include "resources/GL_ShaderProgram.h"
 #include "resources/Tileset.h"
 #include "utils/string_helpers.h"
 
@@ -32,15 +30,9 @@ struct TilesetInstance {
 };
 
 struct Tilemap::Impl {
-  explicit Impl() {
-    shader = ResourceManager::getActive()->get<GL_ShaderProgram>(
-        "/assets/shaders/tile2d.shader");
-    mapDetails.resize(5);
-  }
+  explicit Impl() { mapDetails.resize(5); }
   ~Impl() {}
 
-  GL_TileRenderer renderer;
-  GL_ShaderProgramPtr shader;
   Dimension2Du32 pixelSize;
   Vector<float> mapDetails;
   Vector<TilesetInstance> tilesets;
@@ -50,20 +42,18 @@ RENITY_API Tilemap::Tilemap() { pimpl_ = new Impl(); }
 
 RENITY_API Tilemap::~Tilemap() { delete pimpl_; }
 
-RENITY_API void Tilemap::draw(const Point2Di32 position) {
-  // Use special tile shaders that understand the variables we're sending
-  pimpl_->shader->activate();
-
+RENITY_API void Tilemap::draw(GL_TileRenderer &renderer,
+                              const Point2Di32 position) {
   // Set shader uniforms specifying map position, size, and depth.
   // The rest of the values are set during load().
   // Vertex shader will use this along with tile X/Y/Z to position & sort tiles.
   pimpl_->mapDetails[0] = (float)position.x();
   pimpl_->mapDetails[1] = position.y() * -1.0f;
-  pimpl_->shader->setUniformBlock("MapDetails", pimpl_->mapDetails);
+  renderer.getShader()->setUniformBlock("MapDetails", pimpl_->mapDetails);
 
   for (auto &tsInstance : pimpl_->tilesets) {
     tsInstance.tileset->use();
-    pimpl_->renderer.draw(tsInstance.tiles);
+    renderer.draw(tsInstance.tiles);
   }
 }
 

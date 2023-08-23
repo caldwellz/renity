@@ -161,6 +161,7 @@ RENITY_API bool GL_ShaderProgram::setUniformBlock(String blockName,
   // Associate binding points with shader program uniform block names, as needed
   // (e.g. "MyBlock" in "layout (std140) uniform MyBlock { vec4 myVec; }")
   if (!pimpl_->bindingPoints.exists(blockName)) {
+    activate();
     GLuint blockIndex =
         glGetUniformBlockIndex(pimpl_->shaderProgram, blockName.c_str());
 #ifdef RENITY_DEBUG

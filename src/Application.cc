@@ -25,8 +25,7 @@
 #include "Window.h"
 #include "config.h"
 #include "resources/GL_ShaderProgram.h"
-#include "resources/Tilemap.h"
-#include "resources/Tileset.h"
+#include "resources/TileWorld.h"
 // #include "gl3.h"
 #include "types.h"
 #include "utils/id_helpers.h"
@@ -273,16 +272,14 @@ RENITY_API int Application::run() {
   Uint64 lastFrameTime = SDL_GetTicksNS();
   Uint64 fpsTime = 0;
   int clearColor[3] = {32, 32, 32};
-  Sint32 mapOffset[2] = {0, 0};
+  Sint32 worldOffset[2] = {0, 0};
   float fps = 1.0f, scale = 1.0f, width, height;
-  // Vector<Sprite> sprites;
-  Uint64 spriteCount = 0;
   srand((Uint32)SDL_GetTicksNS());
   GL_ShaderProgramPtr shader =
       ResourceManager::getActive()->get<GL_ShaderProgram>(
           "/assets/shaders/tile2d.shader");
-  TilemapPtr map =
-      ResourceManager::getActive()->get<Tilemap>("/assets/maps/test1.tmj");
+  TileWorldPtr world =
+      ResourceManager::getActive()->get<TileWorld>("/assets/maps/test.world");
 
   while (keepGoing) {
     // Recalculate displayed FPS every second
@@ -296,29 +293,6 @@ RENITY_API int Application::run() {
     }
     ++frames;
 
-    // Add more sprites until we start dropping frames
-    // const double realtimeFPS = (double)SDL_NS_PER_SECOND / timeDelta;
-    /*
-    if (spriteCount < 10) {  // realtimeFPS > 59.9999) {
-      sprites.emplace_back("epic.png");
-      sprites.back().setPosition({pimpl_->window.size().width() / 2,
-                                  pimpl_->window.size().height() / 2});
-      sprites.back().setMoveHeading(rand());
-      ++spriteCount;
-    }
-
-    // Move & draw sprites
-    const double moveSpeed = 650.0f * ((double)timeDelta / SDL_NS_PER_SECOND);
-    for (auto &s : sprites) {
-      s.setMoveSpeed(moveSpeed);
-      int x = s.getPosition().x();
-      int y = s.getPosition().y();
-      if (x < 0 || x > pimpl_->window.size().width()) s.bounceHorizontal();
-      if (y < 0 || y > pimpl_->window.size().height()) s.bounceVertical();
-      s.move();
-      s.draw();
-    }
-    */
     width = (float)pimpl_->window.size().width();
     height = (float)pimpl_->window.size().height();
 
@@ -331,7 +305,7 @@ RENITY_API int Application::run() {
       ImGui::PushStyleColor(ImGuiCol_TitleBgActive,
                             IM_COL32(clearColor[0] / 2, clearColor[1] / 2,
                                      clearColor[2] / 2, 128));
-      ImGui::SetNextWindowSize(ImVec2(0, 240));
+      ImGui::SetNextWindowSize(ImVec2(0, 200));
       ImGui::Begin("Settings");
 
       // ImGui::Text("Rendering %llu sprites.", spriteCount);
@@ -341,10 +315,10 @@ RENITY_API int Application::run() {
       // ImGui::ColorEdit3("Background color", clearColor);
       ImGui::SliderInt3("Background color", clearColor, 0, 255, "#%02X",
                         ImGuiSliderFlags_AlwaysClamp);
-      ImGui::SliderFloat("Window width", &width, 1.0f, 2048.0f, "%.0f");
-      ImGui::SliderFloat("Window height", &height, 1.0f, 2048.0f, "%.0f");
-      ImGui::SliderFloat("Map scale", &scale, 0.1f, 8.0f, "%.1f");
-      ImGui::SliderInt2("Map offset", mapOffset, -1024, 1024);
+      // ImGui::SliderFloat("Window width", &width, 1.0f, 2048.0f, "%.0f");
+      // ImGui::SliderFloat("Window height", &height, 1.0f, 2048.0f, "%.0f");
+      ImGui::SliderFloat("World scale", &scale, 0.1f, 8.0f, "%.1f");
+      ImGui::SliderInt2("World offset", worldOffset, -1024, 1024);
 
       ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / fps,
                   fps);
@@ -358,15 +332,16 @@ RENITY_API int Application::run() {
       vsyncLast = vsync;
     }
 
-    // Draw sample map
+    // Draw sample world
     getWindow()->clearColor({(Uint8)clearColor[0], (Uint8)clearColor[1],
                              (Uint8)clearColor[2], 255});
     // TODO: Replace with a window-size action listener in TileRenderer
-    // Move scale there too as a settable / action listener
+    // Move scale there too as a settable and/or action listener
+    // Default scale should be SDL_GL_GetDrawableSize / SDL_GetWindowSize
     shader->activate();
     GL_ShaderProgram::getActive()->setUniformBlock<float>(
         "ViewParams", {width, height, scale});
-    map->draw({mapOffset[0], mapOffset[1]});
+    world->draw({worldOffset[0], worldOffset[1]}, scale);
 
     // Pump events, then clear them all out after subsystems react to the
     // updates, only listening for quit here. Subsystems should use

@@ -8,6 +8,7 @@ resources_headers = files([
 , 'StringBuffer.h'
 , 'Tilemap.h'
 , 'Tileset.h'
+, 'TileWorld.h'
 ])
 
 resources_include_subdir = base_include_subdir / 'resources'

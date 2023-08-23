@@ -130,7 +130,10 @@ class RENITY_API Window {
   /** Set the window's position to be centered on the display.
    * Can be called any time (before or after open() or close()).
    */
-  void centerPosition();
+  void centerOnDisplay();
+
+  /** Get the center point of the window's width and height, in pixels. */
+  Point2Di32 getCenterPoint() const;
 
   /** Get the window's size.
    * Uses an i32 for consistency, even though a u16 should be quite sufficient.

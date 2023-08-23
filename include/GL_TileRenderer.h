@@ -9,6 +9,7 @@
  ***************************************************/
 #pragma once
 
+#include "resources/GL_ShaderProgram.h"
 #include "types.h"
 
 namespace renity {
@@ -25,6 +26,9 @@ class RENITY_API GL_TileRenderer {
    * It's disabled by default (drawing in "fill" mode).
    */
   static void enableWireframe(bool enable = true);
+
+  /** Get a shared pointer to the tile rendering shader program. */
+  GL_ShaderProgramPtr getShader();
 
   /** Draw a tile list using the current texture and shader program.
    * Changes the currently-bound VAO/VBOs and does not restore them.
