@@ -18,6 +18,31 @@ namespace renity {
 constexpr size_t MAX_UNIFORM_BLOCK_NAMES = 24;
 constexpr size_t MAX_UNIFORM_BLOCK_ITEMS = 16384 / sizeof(float);
 
+struct vec4 {
+  union {
+    float x;
+    float r;
+    float p;
+    float u;
+  };
+  union {
+    float y;
+    float g;
+    float q;
+    float v;
+  };
+  union {
+    float z;
+    float b;
+    float s;
+  };
+  union {
+    float w;
+    float a;
+    float t;
+  };
+};
+
 class RENITY_API GL_ShaderProgram : public Resource {
  public:
   GL_ShaderProgram();
@@ -34,6 +59,11 @@ class RENITY_API GL_ShaderProgram : public Resource {
    * are active.
    */
   static GL_ShaderProgram* getActive();
+
+  /** Set the GL blending functions to be used when the shader is activated.
+   * Defaults to GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA on shader creation.
+   */
+  void setBlendFunc(Uint32 src, Uint32 dest);
 
   /** Set a uniform block's buffer data, up to MAX_UNIFORM_BLOCK_ITEMS.
    * MAX_UNIFORM_BLOCK_NAMES specifies the max number of unique blockNames.

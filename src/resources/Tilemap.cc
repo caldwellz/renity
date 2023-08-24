@@ -29,12 +29,16 @@ struct TilesetInstance {
   Vector<TileInstance> tiles;
 };
 
+constexpr Uint8 MAX_DETAIL_VECS = 1 + MAX_MAP_LIGHTS * 2;
 struct Tilemap::Impl {
-  explicit Impl() { mapDetails.resize(5); }
+  explicit Impl() : nextLightSlot(1) {
+    mapDetails.assign(MAX_DETAIL_VECS, {0.0f, 0.0f, 0.0f, 0.0f});
+  }
   ~Impl() {}
 
+  Uint8 nextLightSlot;
   Dimension2Du32 pixelSize;
-  Vector<float> mapDetails;
+  Vector<vec4> mapDetails;
   Vector<TilesetInstance> tilesets;
 };
 
@@ -47,9 +51,9 @@ RENITY_API void Tilemap::draw(GL_TileRenderer &renderer,
   // Set shader uniforms specifying map position, size, and depth.
   // The rest of the values are set during load().
   // Vertex shader will use this along with tile X/Y/Z to position & sort tiles.
-  pimpl_->mapDetails[0] = (float)position.x();
-  pimpl_->mapDetails[1] = position.y() * -1.0f;
-  renderer.getShader()->setUniformBlock("MapDetails", pimpl_->mapDetails);
+  pimpl_->mapDetails[0].x = (float)position.x();
+  pimpl_->mapDetails[0].y = position.y() * -1.0f;
+  renderer.getTileShader()->setUniformBlock("MapDetails", pimpl_->mapDetails);
 
   for (auto &tsInstance : pimpl_->tilesets) {
     tsInstance.tileset->use();
@@ -76,6 +80,7 @@ RENITY_API void Tilemap::load(SDL_RWops *src) {
                  tileCountX, tileCountY, tileWidth, tileHeight);
     return;
   }
+  pimpl_->mapDetails.assign(MAX_DETAIL_VECS, {0.0f, 0.0f, 0.0f, 0.0f});
 
   // (Re)load the tilesets
   pimpl_->tilesets.clear();
@@ -130,6 +135,7 @@ RENITY_API void Tilemap::load(SDL_RWops *src) {
     Uint32 tileNum;
     for (tileNum = dict.begin(); tileNum < tileCountX * tileCountY; ++tileNum) {
       TileInstance tile;
+      tile.v = 0;
 
       // Layers should be the same size as the map; ignore missing/extra tiles
       Uint32 tileId = 0;
@@ -142,9 +148,10 @@ RENITY_API void Tilemap::load(SDL_RWops *src) {
       // Invert the Y into bottom-left coordinates for the shader
       // TODO: Find out whether tiles are ever *not* indexed from the top-left
       // TODO: Test and support variable tile sizes in the same map
+      Uint32 mapSpaceX = tileNum % tileCountX;
       Uint32 mapSpaceY = tileNum / tileCountX;
+      tile.x = mapSpaceX * tileWidth;
       tile.y = (tileCountY - 1 - mapSpaceY) * tileHeight;
-      tile.x = (tileNum % tileCountX) * tileWidth;
 
       // Tiled layer order is currently bottom-to-top; top layers have lowest Z
       Uint32 layerZ = (layerCount - layerId) * pimpl->pixelSize.height();
@@ -169,21 +176,47 @@ RENITY_API void Tilemap::load(SDL_RWops *src) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
                      "Tilemap::load: Tileset not found for tile (%u, %u) on "
                      "layer %u ('%s').",
-                     tile.x, mapSpaceY, layerId, layerName);
+                     mapSpaceX, mapSpaceY, layerId, layerName);
         continue;
+      }
+
+      // Add its pointLight if it has one
+      Uint32 lightColor =
+          pimpl->tilesets[tilesetIndex].tileset->getLightColor(tileId);
+      if (lightColor != 0) {
+        if (pimpl->nextLightSlot >= MAX_DETAIL_VECS) {
+          SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                      "Tilemap::load: Exceeded MAX_MAP_LIGHTS (%u); skipping "
+                      "light at (%u, %u) on layer '%s'",
+                      MAX_MAP_LIGHTS, mapSpaceX, mapSpaceY, layerName);
+        } else {
+          vec4 lightColorVec;
+          lightColorVec.r = (float)((lightColor >> 24) & 0x000000FF) / 255.0f;
+          lightColorVec.g = (float)((lightColor >> 16) & 0x000000FF) / 255.0f;
+          lightColorVec.b = (float)((lightColor >> 8) & 0x000000FF) / 255.0f;
+          lightColorVec.a = (float)(lightColor & 0x000000FF) / 255.0f;
+          pimpl->mapDetails.at(pimpl->nextLightSlot++) = lightColorVec;
+          vec4 lightPos;
+          lightPos.x = (float)tile.x;
+          lightPos.y = (float)tile.y;
+          lightPos.z = (float)tile.z;
+          lightPos.w = 1.0f;
+          pimpl->mapDetails.at(pimpl->nextLightSlot++) = lightPos;
+        }
       }
 
       // Convert tile id to U/V position and invert the Y to make it bottup-up
       Dimension2Du32 tilesetDims =
           pimpl->tilesets[tilesetIndex].tileset->getTileCounts();
-      tile.u = (tileId % tilesetDims.width()) * tileWidth;
-      Uint32 tilesetSpaceV = tileId / tilesetDims.width();
-      tile.v = (tilesetDims.height() - 1 - tilesetSpaceV) * tileHeight;
+      Uint32 tilesetSpaceT = tileId % tilesetDims.width();
+      Uint32 tilesetSpaceU = tileId / tilesetDims.width();
+      tile.t = tilesetSpaceT * tileWidth;
+      tile.u = (tilesetDims.height() - 1 - tilesetSpaceU) * tileHeight;
 
       SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
                      "Tile (%u, %u, %u)[%u, %u] -> (%u, %u, %u)[%u, %u]",
-                     tile.x, mapSpaceY, layerId, tile.u, tilesetSpaceV, tile.x,
-                     tile.y, tile.z, tile.u, tile.v);
+                     mapSpaceX, mapSpaceY, layerId, tilesetSpaceT,
+                     tilesetSpaceU, tile.x, tile.y, tile.z, tile.t, tile.u);
       pimpl->tilesets[tilesetIndex].tiles.push_back(tile);
     }
     SDL_LogVerbose(
@@ -196,9 +229,8 @@ RENITY_API void Tilemap::load(SDL_RWops *src) {
   });
 
   // Preconfigure MapDetails for shader
-  pimpl_->mapDetails = {0.0f, 0.0f, (float)pimpl_->pixelSize.width(),
-                        (float)pimpl_->pixelSize.height(),
-                        (float)(layerCount * pimpl_->pixelSize.height())};
+  pimpl_->mapDetails[0].s = -(float)pimpl_->pixelSize.height();
+  pimpl_->mapDetails[0].t = (float)(layerCount * pimpl_->pixelSize.height());
 
   // TODO: Sort tiles front-to-back to take advantage of the depth buffer
 

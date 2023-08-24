@@ -290,6 +290,13 @@ RENITY_API Uint32 Dictionary::end(const char *key) {
   return index;
 }
 
+RENITY_API bool Dictionary::isArray(const char *path) {
+  size_t depth = select(path, false, true);
+  bool isArray = !!duk_is_array(pimpl_->ctx, -1);
+  unwind(depth);
+  return isArray;
+}
+
 RENITY_API Uint32 Dictionary::enumerate(
     const char *path,
     const FuncPtr<bool(Dictionary &, const String &)> &callback) {

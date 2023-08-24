@@ -52,6 +52,7 @@ RENITY_API void TileWorld::draw(const Point2Di32 cameraPos, float scale) {
                          .scaleFromCenter(1.0f / scale);
 
     // TODO: Implement neighbor and/or binary search and map cache eviction
+    // TODO: Also coordinate edge lights from neighbor maps for cross-lighting
     visibleMaps.clear();
     for (auto inst : pimpl_->maps) {
       if (aabb.intersects(inst.worldBounds)) {
@@ -65,6 +66,8 @@ RENITY_API void TileWorld::draw(const Point2Di32 cameraPos, float scale) {
     // Map inverts the Y axis into GL coordinates - no need to do it here
     Point2Di32 mapOffset = instance.worldBounds.position() - cameraPos;
     instance.map->draw(pimpl_->renderer, mapOffset);
+    // Reset the Z buffer for the next map
+    glClear(GL_DEPTH_BUFFER_BIT);
   }
 }
 
@@ -90,10 +93,11 @@ RENITY_API void TileWorld::load(SDL_RWops *src) {
     TilemapPtr map = ResourceManager::getActive()->get<Tilemap>(mapPath);
     Rect2Di32 bounds(x, y, width, height);
     pimpl->maps.emplace_back(map, bounds);
-    SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
-                 "TileWorld::load: Successfully cached map '%s' with rect (%i, "
-                 "%i)+(%i, %i).",
-                 mapPath, x, y, width, height);
+    SDL_LogVerbose(
+        SDL_LOG_CATEGORY_APPLICATION,
+        "TileWorld::load: Successfully cached map '%s' with rect (%i, "
+        "%i)+(%i, %i).",
+        mapPath, x, y, width, height);
     return true;
   });
 

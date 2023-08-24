@@ -22,8 +22,14 @@ class RENITY_API Tileset : public Resource {
   /** Make this the active tileset for the current Window. */
   void use();
 
+  /** Get the point light color of the given tile id.
+   * \param id The 0-indexed TileId, relative to the tileset.
+   * \returns The light color as 0xRRGGBBAA, or 0 if the tile emits no light.
+   */
+  Uint32 getLightColor(TileId id) const;
+
   /** Get the number of drawable tiles in each dimension (width and height). */
-  Dimension2Du32 getTileCounts();
+  Dimension2Du32 getTileCounts() const;
 
  protected:
   friend class ResourceManager;

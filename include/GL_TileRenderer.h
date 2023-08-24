@@ -14,8 +14,10 @@
 
 namespace renity {
 struct TileInstance {
-  Uint32 x, y, z, u, v;
+  Uint32 x, y, z;
+  Uint32 t, u, v;
 };
+using LightInstance = TileInstance;
 
 class RENITY_API GL_TileRenderer {
  public:
@@ -28,13 +30,13 @@ class RENITY_API GL_TileRenderer {
   static void enableWireframe(bool enable = true);
 
   /** Get a shared pointer to the tile rendering shader program. */
-  GL_ShaderProgramPtr getShader();
+  GL_ShaderProgramPtr getTileShader();
 
-  /** Draw a tile list using the current texture and shader program.
+  /** Draw a tile list using the current texture.
    * Changes the currently-bound VAO/VBOs and does not restore them.
-   * \param instances A vector of TileInstance structures to draw.
+   * \param tiles A vector of TileInstance structures to draw.
    */
-  void draw(const Vector<TileInstance>& instances);
+  void draw(const Vector<TileInstance>& tiles);
 
  private:
   struct Impl;

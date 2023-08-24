@@ -327,7 +327,6 @@ RENITY_API bool Window::open() {
 
   // Configure features, activate the clear color, then clear initial buffers
   glEnable(GL_BLEND);
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   // Point flags are only available in desktop GL; in ES3 they're always enabled
   // glEnable(GL_POINT_SPRITE);
   // glEnable(GL_PROGRAM_POINT_SIZE);

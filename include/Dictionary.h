@@ -85,6 +85,9 @@ class RENITY_API Dictionary : public Resource {
    */
   Uint32 end(const char *key = nullptr);
 
+  /** Determine whether the given path is an array. */
+  bool isArray(const char *path);
+
   /** Enumerate an object or array using a callback.
    * @param path A path to enumerate.
    * Can be a nullptr to use the currently-selected path.

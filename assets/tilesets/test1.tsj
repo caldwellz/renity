@@ -8,6 +8,15 @@
  "tilecount":256,
  "tiledversion":"1.10.2",
  "tileheight":32,
+ "tiles":[{
+    "id":117,
+    "properties":[
+    {
+        "name":"pointLight",
+        "type":"color",
+        "value":"#fff1cd26"
+    }]
+ }],
  "tilewidth":32,
  "transparentcolor":"#000000",
  "type":"tileset",

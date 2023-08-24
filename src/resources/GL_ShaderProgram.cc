@@ -25,7 +25,12 @@ namespace renity {
 GL_ShaderProgram* currentGLShaderProgram = nullptr;
 
 struct GL_ShaderProgram::Impl {
-  explicit Impl() : dirty(false), valid(false), nextBindingPoint(1) {
+  explicit Impl()
+      : dirty(false),
+        valid(false),
+        nextBindingPoint(1),
+        blendSrc(GL_SRC_ALPHA),
+        blendDst(GL_ONE_MINUS_SRC_ALPHA) {
     shaderProgram = glCreateProgram();
     if (!shaderProgram) {
       SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
@@ -102,6 +107,7 @@ struct GL_ShaderProgram::Impl {
   bool dirty, valid;
   GLuint shaderProgram, nextBindingPoint,
       uniformBuffers[MAX_UNIFORM_BLOCK_NAMES + 1];
+  GLenum blendSrc, blendDst;
   GL_VertShaderPtr vert;
   GL_FragShaderPtr frag;
   HashTable<String, GLuint> bindingPoints;
@@ -125,6 +131,7 @@ RENITY_API void GL_ShaderProgram::activate() {
         pimpl_->shaderProgram);
   }
 #endif
+  glBlendFunc(pimpl_->blendSrc, pimpl_->blendDst);
   glUseProgram(pimpl_->shaderProgram);
   for (GLuint bindPoint = 1; bindPoint < pimpl_->nextBindingPoint;
        ++bindPoint) {
@@ -141,6 +148,11 @@ static void flagReload(void* userdata) {
   GL_ShaderProgram::Impl* pimpl_ =
       static_cast<GL_ShaderProgram::Impl*>(userdata);
   pimpl_->dirty = true;
+}
+
+RENITY_API void GL_ShaderProgram::setBlendFunc(Uint32 src, Uint32 dest) {
+  pimpl_->blendSrc = src;
+  pimpl_->blendDst = dest;
 }
 
 template <typename T>
@@ -196,6 +208,8 @@ RENITY_API bool GL_ShaderProgram::setUniformBlock(String blockName,
   return true;
 }
 // Supported uniform type specializations
+template RENITY_API bool GL_ShaderProgram::setUniformBlock(
+    String blockName, Vector<vec4> uniforms);
 template RENITY_API bool GL_ShaderProgram::setUniformBlock(
     String blockName, Vector<float> uniforms);
 template RENITY_API bool GL_ShaderProgram::setUniformBlock(

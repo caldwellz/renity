@@ -24,9 +24,9 @@
 #include "ResourceManager.h"
 #include "Window.h"
 #include "config.h"
+// #include "gl3.h"
 #include "resources/GL_ShaderProgram.h"
 #include "resources/TileWorld.h"
-// #include "gl3.h"
 #include "types.h"
 #include "utils/id_helpers.h"
 #include "utils/string_helpers.h"
@@ -277,7 +277,7 @@ RENITY_API int Application::run() {
   float fps = 1.0f, scale = 1.0f, width, height;
   float ambient[3] = {0.5f, 0.5f, 0.5f};
   srand((Uint32)SDL_GetTicksNS());
-  GL_ShaderProgramPtr shader =
+  GL_ShaderProgramPtr tileShader =
       ResourceManager::getActive()->get<GL_ShaderProgram>(
           "/assets/shaders/tile2d.shader");
   TileWorldPtr world =
@@ -318,7 +318,7 @@ RENITY_API int Application::run() {
                         ImGuiSliderFlags_AlwaysClamp);
       ImGui::ColorEdit3("Ambient light", ambient);
       ImGui::SliderFloat("World scale", &scale, 0.1f, 8.0f, "%.1f");
-      ImGui::SliderInt2("World offset", worldOffset, -1024, 1024);
+      ImGui::SliderInt2("Camera position", worldOffset, -500, 2000);
       ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / fps,
                   fps);
       ImGui::End();
@@ -337,11 +337,10 @@ RENITY_API int Application::run() {
     // TODO: Replace with a window-size action listener in TileRenderer
     // Move scale there too as a settable and/or action listener
     // Default scale should be SDL_GL_GetDrawableSize / SDL_GetWindowSize
-    shader->activate();
-    GL_ShaderProgram::getActive()->setUniformBlock<float>(
-        "ViewParams", {width, height, scale});
-    GL_ShaderProgram::getActive()->setUniformBlock<float>(
-        "LightingParams", {ambient[0], ambient[1], ambient[2]});
+    tileShader->activate();
+    tileShader->setUniformBlock<float>("ViewParams", {width, height, scale});
+    tileShader->setUniformBlock<float>("LightingParams",
+                                       {ambient[0], ambient[1], ambient[2]});
     world->draw({worldOffset[0], worldOffset[1]}, scale);
 
     // Pump events, then clear them all out after subsystems react to the

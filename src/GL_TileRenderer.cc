@@ -20,7 +20,7 @@ struct GL_TileRenderer::Impl {
     glGenVertexArrays(1, &vao);
     glGenBuffers(1, &vbo);
     glGenBuffers(1, &ibo);
-    shader = ResourceManager::getActive()->get<GL_ShaderProgram>(
+    tileShader = ResourceManager::getActive()->get<GL_ShaderProgram>(
         "/assets/shaders/tile2d.shader");
   }
 
@@ -31,15 +31,15 @@ struct GL_TileRenderer::Impl {
   }
 
   GLuint vao, vbo, ibo;
-  GL_ShaderProgramPtr shader;
+  GL_ShaderProgramPtr tileShader;
 };
 
 RENITY_API GL_TileRenderer::GL_TileRenderer() {
   pimpl_ = new Impl();
   Vector<float> verticesWithUvs = {
-      1.0f,  1.0f,  0.0f, 1.0f, 1.0f, -1.0f, 1.0f,  0.0f, 0.0f, 1.0f,
       -1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f,  1.0f,  0.0f, 1.0f, 1.0f,
-      -1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f,  -1.0f, 0.0f, 1.0f, 0.0f};
+      -1.0f, 1.0f,  0.0f, 0.0f, 1.0f, -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+      1.0f,  -1.0f, 0.0f, 1.0f, 0.0f, 1.0f,  1.0f,  0.0f, 1.0f, 1.0f};
 
   const size_t bufSize = sizeof(float) * verticesWithUvs.size();
   const size_t bufStride = sizeof(float) * 5;
@@ -61,11 +61,12 @@ RENITY_API GL_TileRenderer::GL_TileRenderer() {
   // Configure the instances buffer that will be filled every draw call
   glBindBuffer(GL_ARRAY_BUFFER, pimpl_->ibo);
   glEnableVertexAttribArray(2);
-  glVertexAttribIPointer(2, 3, GL_UNSIGNED_INT, sizeof(TileInstance), 0);
+  glVertexAttribPointer(2, 3, GL_UNSIGNED_INT, GL_FALSE, sizeof(TileInstance),
+                        0);
   glVertexAttribDivisor(2, 1);
   glEnableVertexAttribArray(3);
-  glVertexAttribIPointer(3, 2, GL_UNSIGNED_INT, sizeof(TileInstance),
-                         (void *)(offsetof(TileInstance, u)));
+  glVertexAttribPointer(3, 3, GL_UNSIGNED_INT, GL_FALSE, sizeof(TileInstance),
+                        (const void *)(offsetof(TileInstance, t)));
   glVertexAttribDivisor(3, 1);
 
   // Unbind everything to be safe
@@ -81,17 +82,17 @@ RENITY_API void GL_TileRenderer::enableWireframe(bool enable) {
   drawMode = enable ? GL_LINES : GL_TRIANGLES;
 }
 
-RENITY_API GL_ShaderProgramPtr GL_TileRenderer::getShader() {
-  return pimpl_->shader;
+RENITY_API GL_ShaderProgramPtr GL_TileRenderer::getTileShader() {
+  return pimpl_->tileShader;
 }
 
-RENITY_API void GL_TileRenderer::draw(const Vector<TileInstance> &instances) {
-  pimpl_->shader->activate();
+RENITY_API void GL_TileRenderer::draw(const Vector<TileInstance> &tiles) {
+  pimpl_->tileShader->activate();
   glBindVertexArray(pimpl_->vao);
   // TODO: Try removing this, since the VAO should bind it
   glBindBuffer(GL_ARRAY_BUFFER, pimpl_->ibo);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(TileInstance) * instances.size(),
-               instances.data(), GL_STREAM_DRAW);
-  glDrawArraysInstanced(drawMode, 0, 6, instances.size());
+  glBufferData(GL_ARRAY_BUFFER, sizeof(TileInstance) * tiles.size(),
+               tiles.data(), GL_STREAM_DRAW);
+  glDrawArraysInstanced(drawMode, 0, 6, tiles.size());
 }
 }  // namespace renity

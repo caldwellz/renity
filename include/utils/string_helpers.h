@@ -44,5 +44,21 @@ inline bool endsWith(const String str, const String suffix) {
   return str.size() >= suffix.size() &&
          str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
 }
+
+/** Parses an ARGB #color hex string into an RBGA value. */
+inline Uint32 strToColor(const String str) {
+  Uint32 rgb;
+  Uint8 a;
+  String slicedStr = beginsWith(str, "#") ? str.substr(1) : str;
+  if (slicedStr.length() > 8 || slicedStr.length() < 6) return 0;
+  if (slicedStr.length() == 8) {
+    rgb = std::stol(slicedStr.substr(2), nullptr, 16);
+    a = std::stol(slicedStr.substr(0, 2), nullptr, 16);
+  } else {
+    rgb = std::stol(slicedStr, nullptr, 16);
+    a = 0xFF;
+  }
+  return (rgb << 8) | a;
+}
 #pragma warning(default : 4244)
 }  // namespace renity

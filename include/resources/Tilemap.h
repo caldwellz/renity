@@ -15,7 +15,8 @@
 #include "types.h"
 
 namespace renity {
-// constexpr Uint8 MAX_MAP_LAYERS = 64;
+// Max number currently allowed by the GLES varying variables threshold
+constexpr Uint8 MAX_MAP_LIGHTS = 15;
 
 class RENITY_API Tilemap : public Resource {
  public:

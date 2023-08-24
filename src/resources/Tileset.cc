@@ -19,6 +19,7 @@
 #include "ResourceManager.h"
 #include "resources/GL_ShaderProgram.h"
 #include "resources/GL_Texture2D.h"
+#include "utils/string_helpers.h"
 
 namespace renity {
 struct Tileset::Impl {
@@ -27,6 +28,7 @@ struct Tileset::Impl {
 
   Dimension2Du32 tileCount;
   Vector<float> tilesetSize;
+  Vector<Uint32> pointLights;
   GL_Texture2DPtr tex;
 };
 
@@ -48,9 +50,16 @@ RENITY_API void Tileset::use() {
                                                  pimpl_->tilesetSize);
 }
 
-RENITY_API Dimension2Du32 Tileset::getTileCounts() { return pimpl_->tileCount; }
+RENITY_API Uint32 Tileset::getLightColor(TileId id) const {
+  if (id > pimpl_->pointLights.size()) return 0;
+  return pimpl_->pointLights[id];
+}
 
-RENITY_API void Tileset::load(SDL_RWops* src) {
+RENITY_API Dimension2Du32 Tileset::getTileCounts() const {
+  return pimpl_->tileCount;
+}
+
+RENITY_API void Tileset::load(SDL_RWops *src) {
   Dictionary dict;
   dict.load(src);
 
@@ -72,16 +81,16 @@ RENITY_API void Tileset::load(SDL_RWops* src) {
     }
   */
 
-  const char* sheetPath;
-  Uint32 sheetWidth, sheetHeight, tileWidth, tileHeight;
-  if (!dict.get<const char*>("image", &sheetPath) ||
+  const char *sheetPath = "<default>";
+  Uint32 sheetWidth = 32, sheetHeight = 32, tileWidth = 32, tileHeight = 32;
+  if (!dict.get<const char *>("image", &sheetPath) ||
       !dict.get<Uint32>("imagewidth", &sheetWidth) ||
       !dict.get<Uint32>("imageheight", &sheetHeight) ||
       !dict.get<Uint32>("tilewidth", &tileWidth) ||
       !dict.get<Uint32>("tileheight", &tileHeight)) {
     SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                 "Tileset::load: Missing image path or dimension details");
-    return;
+                 "Tileset::load: Missing image path or dimension details - "
+                 "using internal defaults.");
   }
 
   pimpl_->tex = ResourceManager::getActive()->get<GL_Texture2D>(sheetPath);
@@ -98,5 +107,38 @@ RENITY_API void Tileset::load(SDL_RWops* src) {
                          (float)imgSize.width(), (float)imgSize.height()};
   pimpl_->tileCount.width(imgSize.width() / tileWidth);
   pimpl_->tileCount.height(imgSize.height() / tileHeight);
+
+  // (Re)load tile properties
+  size_t totalTiles = pimpl_->tileCount.getArea();
+  pimpl_->pointLights.assign(totalTiles, 0);
+  if (!dict.isArray("tiles")) return;
+  dict.enumerateArray("tiles", [colors = &pimpl_->pointLights](
+                                   Dictionary &dict, const Uint32 &index) {
+    if (!dict.isArray("properties")) return true;
+
+    size_t id = 0;
+    dict.get("id", &id);
+    dict.enumerateArray("properties", [id, colors](Dictionary &dict,
+                                                   const Uint32 &index) {
+      const char *name, *type;
+      if (!dict.get<const char *>("name", &name) ||
+          !dict.get<const char *>("type", &type)) {
+        SDL_LogError(
+            SDL_LOG_CATEGORY_APPLICATION,
+            "Tileset::load: Missing name or type for property %u of tile %u.",
+            index, id);
+        return true;
+      }
+      if (beginsWith(name, "pointLight")) {
+        const char *valueStr = "0";
+        dict.get<const char *>("value", &valueStr);
+        Uint32 value = strToColor(valueStr);
+        // Skip if the color is totally transparent
+        if (value & 0xFF) colors->at(id) = value;
+      }
+      return true;
+    });
+    return true;
+  });
 }
 }  // namespace renity
