@@ -12,6 +12,7 @@ out vec4 fragColor;
 layout (std140) uniform LightingParams
 {
   vec3 ambientLight;
+  float gamma;
 };
 
 struct LightConstants {
@@ -25,17 +26,18 @@ const LightConstants light = LightConstants(1.0f, 4.5f, 75.0f);
 void main()
 {
   vec4 tileColor = texture(tilesetTexture, fragTexCoord);
-  vec3 mixedLightColor = vec3(0.0f, 0.0f, 0.0f);
+  vec3 mixedLights = vec3(0.0f, 0.0f, 0.0f);
   for (uint idx = 0u; idx < MAX_MAP_LIGHTS; ++idx) {
     vec3 lightColor = lightColors[idx];
     // Have we reached the end flag?
     if (length(lightColor) < 0.001) {
       break;
     }
-
     float lightDist = lightDistances[idx];
     float attenuation = 1.0f / (light.constantTerm + light.linearTerm * lightDist + light.quadraticTerm * (lightDist * lightDist));
-    mixedLightColor += lightColor * attenuation;
+    mixedLights += lightColor * attenuation;
   }
-  fragColor = vec4(tileColor.rgb * (ambientLight + mixedLightColor) * 2.0f, tileColor.a);
+  vec3 mixedColor = tileColor.rgb * (ambientLight + mixedLights) * 2.0f;
+  vec3 gammaCorrected = pow(mixedColor, vec3(1.0f / gamma));
+  fragColor = vec4(gammaCorrected, tileColor.a);
 }

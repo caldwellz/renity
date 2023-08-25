@@ -274,7 +274,7 @@ RENITY_API int Application::run() {
   int clearColor[3] = {32, 32, 32};
   Sint32 worldOffset[2] = {pimpl_->window.getCenterPoint().x(),
                            pimpl_->window.getCenterPoint().y()};
-  float fps = 1.0f, scale = 1.0f, width, height;
+  float fps = 1.0f, scale = 1.0f, width, height, gamma = 1.0f;
   float ambient[3] = {0.5f, 0.5f, 0.5f};
   srand((Uint32)SDL_GetTicksNS());
   GL_ShaderProgramPtr tileShader =
@@ -307,16 +307,17 @@ RENITY_API int Application::run() {
       ImGui::PushStyleColor(ImGuiCol_TitleBgActive,
                             IM_COL32(clearColor[0] / 2, clearColor[1] / 2,
                                      clearColor[2] / 2, 128));
-      ImGui::SetNextWindowSize(ImVec2(0, 210));
+      ImGui::SetNextWindowSize(ImVec2(0, 235));
       ImGui::Begin("Settings");
 
       // ImGui::Text("Rendering %llu sprites.", spriteCount);
-      ImGui::Checkbox("Demo Window", &show_demo_window);
+      ImGui::Checkbox("ImGui Demo Window", &show_demo_window);
       ImGui::Checkbox("Enable VSync", &vsync);
       ImGui::Checkbox("Enable wireframe", &wireframe);
       ImGui::SliderInt3("Background color", clearColor, 0, 255, "#%02X",
                         ImGuiSliderFlags_AlwaysClamp);
       ImGui::ColorEdit3("Ambient light", ambient);
+      ImGui::SliderFloat("Gamma correction", &gamma, 0.01f, 4.00f, "%.2f");
       ImGui::SliderFloat("World scale", &scale, 0.1f, 8.0f, "%.1f");
       ImGui::SliderInt2("Camera position", worldOffset, -500, 2000);
       ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / fps,
@@ -339,8 +340,8 @@ RENITY_API int Application::run() {
     // Default scale should be SDL_GL_GetDrawableSize / SDL_GetWindowSize
     tileShader->activate();
     tileShader->setUniformBlock<float>("ViewParams", {width, height, scale});
-    tileShader->setUniformBlock<float>("LightingParams",
-                                       {ambient[0], ambient[1], ambient[2]});
+    tileShader->setUniformBlock<float>(
+        "LightingParams", {ambient[0], ambient[1], ambient[2], gamma});
     world->draw({worldOffset[0], worldOffset[1]}, scale);
 
     // Pump events, then clear them all out after subsystems react to the
