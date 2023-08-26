@@ -26,6 +26,7 @@
 #include "config.h"
 // #include "gl3.h"
 #include "resources/GL_ShaderProgram.h"
+#include "resources/ScriptContext.h"
 #include "resources/TileWorld.h"
 #include "types.h"
 #include "utils/id_helpers.h"
@@ -34,16 +35,14 @@
 
 namespace renity {
 struct Application::Impl {
-  explicit Impl(const char *argv0) {
-    context = nullptr;
+  explicit Impl(const char *argv0) : scriptContext(nullptr), headless(false) {
     executableName = argv0;
-    headless = false;
   }
 
   Window window;
   ActionManager actionMgr;
   InputMapper inputMapper;
-  SDL_GLContext context;
+  ScriptContextPtr scriptContext;
   const char *executableName;
   bool headless;
 };
@@ -223,6 +222,10 @@ RENITY_API bool Application::initialize(bool headless) {
   PHYSFS_freeList(pathList);
 #endif
 
+  // Script context needs to not be constructed until AFTER PhysFS is configured
+  pimpl_->scriptContext.reset(new ScriptContext());
+  if (!pimpl_->scriptContext->initialized()) return false;
+
   // Initialize SDL
   Uint32 systems = SDL_INIT_TIMER | SDL_INIT_EVENTS;
   if (!headless) {
@@ -258,7 +261,6 @@ RENITY_API bool Application::initialize(bool headless) {
     if (!pimpl_->window.open()) {
       return false;
     }
-    pimpl_->context = pimpl_->window.getGlContext();
   }
 
   return true;

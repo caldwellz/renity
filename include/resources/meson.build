@@ -5,6 +5,7 @@ resources_headers = files([
 , 'GL_ShaderProgram.h'
 , 'GL_Texture2D.h'
 , 'GL_VertShader.h'
+, 'ScriptContext.h'
 , 'StringBuffer.h'
 , 'Tilemap.h'
 , 'Tileset.h'

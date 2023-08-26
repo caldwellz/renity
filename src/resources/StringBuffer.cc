@@ -30,6 +30,10 @@ RENITY_API const char *StringBuffer::getCStr() const {
   return pimpl_->content.c_str();
 }
 
+RENITY_API size_t StringBuffer::length() const {
+  return pimpl_->content.length();
+}
+
 RENITY_API void StringBuffer::load(SDL_RWops *src) {
   pimpl_->content.clear();
 

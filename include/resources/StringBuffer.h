@@ -22,6 +22,8 @@ class RENITY_API StringBuffer : public Resource {
 
   const char *getCStr() const;
 
+  size_t length() const;
+
   void load(SDL_RWops *src);
 
  private:

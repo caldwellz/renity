@@ -9,6 +9,7 @@
  ***************************************************/
 #pragma once
 
+#include "3rdparty/duktape/duktape.h"
 #include "Resource.h"
 #include "types.h"
 
@@ -201,7 +202,7 @@ class RENITY_API Dictionary : public Resource {
   }
 
  protected:
-  void *getContext();
+  duk_context *getContext();
   size_t select(const char *path, bool autoCreate, bool loadValue);
 
  private:

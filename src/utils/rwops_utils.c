@@ -95,12 +95,13 @@ RENITY_API Sint64 RENITY_ReadCharBufferMax(SDL_RWops* src, char** bufOut,
                                            Uint32 maxSize) {
   Uint8* buf = NULL;
   Sint64 readBytes = RENITY_ReadRawBufferMax(src, &buf, maxSize);
+
+  // If there was no data, still return an empty, null-terminated string
   if (readBytes >= 0) {
-    SDL_realloc(buf, readBytes + 1);
+    buf = SDL_realloc(buf, readBytes + 1);
     buf[readBytes] = '\0';
     *bufOut = (char*)buf;
   }
-
   return readBytes;
 }
 #ifdef __cplusplus

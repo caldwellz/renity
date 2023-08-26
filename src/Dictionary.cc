@@ -127,12 +127,21 @@ RENITY_API bool Dictionary::saveJSON(const char *destPath, bool selectionOnly) {
   } else {
     duk_push_global_object(pimpl_->ctx);
   }
-  const char *buf = duk_json_encode(pimpl_->ctx, -1);
-  Uint32 bufLen = SDL_strlen(buf);
-  bool success =
-      RENITY_WriteBufferToPath(destPath, (const Uint8 *)buf, bufLen) == bufLen;
-  duk_pop(pimpl_->ctx);
-  return success;
+
+  try {
+    const char *buf = duk_json_encode(pimpl_->ctx, -1);
+    Uint32 bufLen = SDL_strlen(buf);
+    bool success = RENITY_WriteBufferToPath(destPath, (const Uint8 *)buf,
+                                            bufLen) == bufLen;
+    duk_pop(pimpl_->ctx);
+    return success;
+  } catch (...) {
+    SDL_LogError(
+        SDL_LOG_CATEGORY_APPLICATION,
+        "Dictionary::saveJSON: Error while encoding dictionary to '%s'.",
+        destPath);
+  }
+  return false;
 }
 
 RENITY_API bool Dictionary::saveCBOR(const char *destPath, bool selectionOnly) {
@@ -151,14 +160,23 @@ RENITY_API bool Dictionary::saveCBOR(const char *destPath, bool selectionOnly) {
   } else {
     duk_push_global_object(pimpl_->ctx);
   }
-  duk_cbor_encode(pimpl_->ctx, -1, 0);
-  duk_size_t bufLen;
-  const Uint8 *buf =
-      (const Uint8 *)duk_get_buffer_data(pimpl_->ctx, -1, &bufLen);
-  bool success =
-      (duk_size_t)RENITY_WriteBufferToPath(destPath, buf, bufLen) == bufLen;
-  duk_pop(pimpl_->ctx);
-  return success;
+
+  try {
+    duk_cbor_encode(pimpl_->ctx, -1, 0);
+    duk_size_t bufLen;
+    const Uint8 *buf =
+        (const Uint8 *)duk_get_buffer_data(pimpl_->ctx, -1, &bufLen);
+    bool success =
+        (duk_size_t)RENITY_WriteBufferToPath(destPath, buf, bufLen) == bufLen;
+    duk_pop(pimpl_->ctx);
+    return success;
+  } catch (...) {
+    SDL_LogError(
+        SDL_LOG_CATEGORY_APPLICATION,
+        "Dictionary::saveCBOR: Error while encoding dictionary to '%s'.",
+        destPath);
+  }
+  return false;
 }
 
 RENITY_API size_t Dictionary::select(const char *path, bool autoCreate,
@@ -480,7 +498,7 @@ RENITY_API bool Dictionary::putObject(const char *key) {
 }
 */
 
-RENITY_API void *Dictionary::getContext() { return pimpl_->ctx; }
+RENITY_API duk_context *Dictionary::getContext() { return pimpl_->ctx; }
 
 #define DICT_IMPL_BASE(T, dukExt, dukInt, printSpec, printAdd)                \
   template <>                                                                 \

@@ -3,6 +3,7 @@ lib_srcs += files([
 , 'GL_Shader.cc'
 , 'GL_ShaderProgram.cc'
 , 'GL_Texture2D.cc'
+, 'ScriptContext.cc'
 , 'StringBuffer.cc'
 , 'Tilemap.cc'
 , 'Tileset.cc'
