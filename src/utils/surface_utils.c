@@ -1,4 +1,4 @@
-/***************************************************
+/****************************************************
  * surface_utils.h: SDL_Surface utility functions   *
  * Copyright (C) 2020-2023 by Zach Caldwell         *
  ****************************************************
@@ -11,6 +11,7 @@
 #include "utils/surface_utils.h"
 
 #include <SDL3/SDL_image.h>
+#include <SDL3/SDL_stdinc.h>
 
 #include "utils/physfsrwops.h"
 
@@ -30,6 +31,79 @@ RENITY_API SDL_Surface *RENITY_LoadPhysSurface(const char *fname) {
   }
 
   return NULL;
+}
+
+RENITY_API SDL_Surface *RENITY_FlipSurfaceHorizontal(SDL_Surface *surf,
+                                                     SDL_bool freeSurf) {
+  if (!surf) return NULL;
+  SDL_Point pt;
+  SDL_Surface *flippedSurf =
+      SDL_CreateSurface(surf->w, surf->h, surf->format->format);
+  SDL_LockSurface(flippedSurf);
+  SDL_LockSurface(surf);
+
+  for (pt.y = 0; pt.y < surf->h; ++pt.y) {
+    for (pt.x = 0; pt.x < surf->w; ++pt.x) {
+      Uint32 color;
+      SDL_Point srcPt = pt;
+      srcPt.x = surf->w - pt.x - 1;
+      RENITY_GetPixelNative(surf, &srcPt, &color);
+      RENITY_SetPixelNative(flippedSurf, &pt, color);
+    }
+  }
+  SDL_UnlockSurface(surf);
+  SDL_UnlockSurface(flippedSurf);
+  if (freeSurf) {
+    SDL_DestroySurface(surf);
+  }
+  return flippedSurf;
+}
+
+RENITY_API SDL_Surface *RENITY_FlipSurfaceVertical(SDL_Surface *surf,
+                                                   SDL_bool freeSurf) {
+  if (!surf) return NULL;
+  SDL_Surface *flippedSurf =
+      SDL_CreateSurface(surf->w, surf->h, surf->format->format);
+  SDL_LockSurface(flippedSurf);
+  SDL_LockSurface(surf);
+  for (int rowCount = 0; rowCount < surf->h; ++rowCount) {
+    Uint8 *destRow =
+        (Uint8 *)flippedSurf->pixels + (rowCount * flippedSurf->pitch);
+    Uint8 *srcRow =
+        (Uint8 *)surf->pixels + ((surf->h - rowCount - 1) * surf->pitch);
+    SDL_memcpy(destRow, srcRow, surf->pitch);
+  }
+  SDL_UnlockSurface(surf);
+  SDL_UnlockSurface(flippedSurf);
+  if (freeSurf) {
+    SDL_DestroySurface(surf);
+  }
+  return flippedSurf;
+}
+
+RENITY_API SDL_Surface *RENITY_RotateSurface180(SDL_Surface *surf,
+                                                SDL_bool freeSurf) {
+  if (!surf) return NULL;
+  SDL_Point srcPt, destPt;
+  SDL_Surface *flippedSurf =
+      SDL_CreateSurface(surf->w, surf->h, surf->format->format);
+  SDL_LockSurface(flippedSurf);
+  SDL_LockSurface(surf);
+  for (srcPt.x = 0; srcPt.x < surf->w; ++srcPt.x) {
+    for (srcPt.y = 0; srcPt.y < surf->h; ++srcPt.y) {
+      Uint32 color;
+      destPt.x = surf->w - srcPt.x - 1;
+      destPt.y = surf->h - srcPt.y - 1;
+      RENITY_GetPixelNative(surf, &srcPt, &color);
+      RENITY_SetPixelNative(flippedSurf, &destPt, color);
+    }
+  }
+  SDL_UnlockSurface(surf);
+  SDL_UnlockSurface(flippedSurf);
+  if (freeSurf) {
+    SDL_DestroySurface(surf);
+  }
+  return flippedSurf;
 }
 
 /** Enable a Surface's transparency color key using a pixel position. */

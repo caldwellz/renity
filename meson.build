@@ -1,8 +1,8 @@
 project('renity', ['c', 'cpp']
-  , version : '0.1.0'
+  , version : '0.2.0'
   , license: 'MPL-2.0'
-  , meson_version : '>=0.50.0'
-  , default_options : ['buildtype=debug', 'warning_level=3', 'cpp_eh=s', 'cpp_rtti=true', 'c_std=c11', 'cpp_std=c++11', 'prefix=/usr/local'])
+  , meson_version : '>=0.64.0'
+  , default_options : ['buildtype=debug', 'warning_level=3', 'cpp_eh=s', 'cpp_rtti=true', 'c_std=c11', 'cpp_std=c++17', 'prefix=/usr/local'])
 
 
 # Add DEBUG/NDEBUG defines
@@ -25,4 +25,5 @@ endif
 if get_option('RENITY_BUILD_SERVER')
   subdir('server')
 endif
+subdir('assets')
 subdir('clients')

@@ -11,7 +11,6 @@
 #include "Window.h"
 
 #include <SDL3/SDL.h>
-#include <SDL3/SDL_main.h>
 #include <assert.h>
 #include <stdio.h>
 

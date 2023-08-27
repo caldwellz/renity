@@ -17,42 +17,144 @@
 #include "3rdparty/dmon/dmon.h"
 #endif
 #include "3rdparty/imgui/imgui.h"
+#include "ActionHandler.h"
+#include "ActionManager.h"
+#include "GL_TileRenderer.h"
+#include "InputMapper.h"
 #include "ResourceManager.h"
-#include "Sprite.h"
+#include "Window.h"
 #include "config.h"
+// #include "gl3.h"
+#include "resources/GL_ShaderProgram.h"
+#include "resources/ScriptContext.h"
+#include "resources/TileWorld.h"
 #include "types.h"
+#include "utils/id_helpers.h"
+#include "utils/string_helpers.h"
 #include "version.h"
 
 namespace renity {
 struct Application::Impl {
-  Impl(const char *argv0) {
-    renderer = nullptr;
+  explicit Impl(const char *argv0) : scriptContext(nullptr), headless(false) {
     executableName = argv0;
-    headless = false;
   }
 
   Window window;
-  ResourceManager resMgr;
-  SDL_Renderer *renderer;
+  ActionManager actionMgr;
+  InputMapper inputMapper;
+  ScriptContextPtr scriptContext;
   const char *executableName;
   bool headless;
 };
 
-RENITY_API Application::Application(int argc, char *argv[]) {
-  // TODO: Command-line flags parsing
-  pimpl_ = new Impl(argv ? argv[0] : nullptr);
-
 #ifdef RENITY_DEBUG
+// Boilerplate to make visit() work
+template <class... Ts>
+struct overloaded : Ts... {
+  using Ts::operator()...;
+};
+template <class... Ts>
+overloaded(Ts...) -> overloaded<Ts...>;
+
+class ActionLogger : public ActionHandler {
+  void logAny(size_t index, const PrimitiveVariant &any) {
+    String str = std::visit(
+        overloaded{[](auto arg) {
+                     String s(typeName(arg));
+                     return s + " " + toString(arg);
+                   },
+                   [](void *arg) {
+                     char str[25];
+                     snprintf(str, 25, "void* 0x%llx", (uintptr_t)arg);
+                     return String(str);
+                   },
+                   [](const String &arg) { return String("String ") + arg; }},
+        any);
+    SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "    %i: %s", index,
+                 str.c_str());
+  }
+
+  void handleAction(const ActionCategoryId categoryId, const Action *action) {
+    static ActionId debugIgnore =
+        ActionManager::getActive()->assignCategory("Ignore", "Debug");
+    static ActionId changeInput = getId("InputMappingChange");
+    static ActionId unmappedButton = getId("UnmappedButtonInput");
+    static ActionId unmappedAxis = getId("UnmappedAxisInput");
+    if (action->getId() == debugIgnore) return;
+    if (action->getId() == unmappedButton || action->getId() == unmappedAxis) {
+      ActionManager::getActive()->post(
+          Action(changeInput, {debugIgnore, action->getData(0)}));
+      SDL_LogDebug(
+          SDL_LOG_CATEGORY_APPLICATION,
+          "ActionLogger::handleAction: REGISTERING INPUT categoryId:0x%08x, "
+          "actionId:0x%08x",
+          categoryId, action->getId(), action->getCreatedAt() / 1000.0f);
+    } else {
+      SDL_LogDebug(
+          SDL_LOG_CATEGORY_APPLICATION,
+          "ActionLogger::handleAction: action: %s (0x%08x), category: "
+          "%s (0x%08x), createdAt: %.1f secs, data:",
+          action->getName().c_str(), action->getId(),
+          ActionManager::getActive()->getNameFromId(categoryId).c_str(),
+          categoryId, action->getCreatedAt() / 1000.0f);
+      for (auto i = 0; i < action->getDataCount(); ++i) {
+        logAny(i, action->getData(i));
+      }
+    }
+  }
+};
+#endif
+
+RENITY_API Application::Application(int argc, char *argv[]) {
+#ifdef RENITY_DEBUG
+  // Redirect logs to a file and turn on debug logs
+  // freopen("stderr.txt", "w", stderr);
   SDL_LogSetAllPriority(SDL_LOG_PRIORITY_DEBUG);
 #else
   SDL_LogSetAllPriority(SDL_LOG_PRIORITY_WARN);
   SDL_LogSetPriority(SDL_LOG_CATEGORY_APPLICATION, SDL_LOG_PRIORITY_INFO);
 #endif
+
+  // TODO: Command-line flags parsing
+  pimpl_ = new Impl(argv && argc ? argv[0] : nullptr);
+
+#ifdef RENITY_DEBUG
+  // Watch for file changes
+  dmon_init();
+
+  // Register an Action logger for various categories
+  ActionHandlerPtr actLogger(new ActionLogger);
+  pimpl_->actionMgr.subscribe(actLogger, "Window");
+  pimpl_->actionMgr.subscribe(actLogger, "Debug");
+  pimpl_->actionMgr.subscribe(actLogger, "Input");
+  pimpl_->actionMgr.subscribe(actLogger, "InputChange");
+#endif
 }
 
 RENITY_API Application::~Application() {
-  this->destroy();
+#ifdef RENITY_DEBUG
+  dmon_deinit();
+#endif
+  pimpl_->window.close();
+  PHYSFS_deinit();
   delete this->pimpl_;
+  SDL_Quit();
+}
+
+static PHYSFS_EnumerateCallbackResult mountAssetPaks(void *data,
+                                                     const char *origdir,
+                                                     const char *fname) {
+  if (endsWith(fname, ".pkg")) {
+    // Can't use origdir because it's in PhysFS notation, not platform-specific
+    String filePath(PHYSFS_getBaseDir());
+    filePath += fname;
+    if (!PHYSFS_mount(filePath.c_str(), "/assets", 1)) {
+      SDL_SetError("Could not mount asset pkg '%s': %s", filePath.c_str(),
+                   PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
+      return PHYSFS_ENUM_ERROR;
+    }
+  }
+  return PHYSFS_ENUM_OK;
 }
 
 RENITY_API bool Application::initialize(bool headless) {
@@ -75,10 +177,9 @@ RENITY_API bool Application::initialize(bool headless) {
       "PhysFS versions: %d.%d.%d (compiled against) vs %d.%d.%d (linked).\n",
       compiled.major, compiled.minor, compiled.patch, linked.major,
       linked.minor, linked.patch);
-  dmon_init();
 #endif
 
-  // Set up PhysFS
+  // Set up PhysFS - needs to be done before Window resMgr activation
   PHYSFS_init(pimpl_->executableName);
   if (!PHYSFS_isInit()) {
     SDL_SetError("Could not init PhysFS: %s",
@@ -87,21 +188,29 @@ RENITY_API bool Application::initialize(bool headless) {
   }
   const char *baseDir = PHYSFS_getBaseDir();
   const char *prefDir = PHYSFS_getPrefDir(PUBLISHER_NAME, PRODUCT_NAME);
-  if (!PHYSFS_mount(prefDir, "/", 0) || !PHYSFS_setWriteDir(prefDir)) {
-    SDL_SetError(
-        "Could not mount PhysFS prefDir '%s' using publisher '%s', product "
-        "'%s': %s",
-        prefDir, PUBLISHER_NAME, PRODUCT_NAME,
-        PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
-    return false;
+
+  // Mount loose files in the user's pref dir and then any mod packages
+  if (!PHYSFS_mount(prefDir, "/profile", 0) || !PHYSFS_setWriteDir(prefDir)) {
+    if (!PHYSFS_setWriteDir(baseDir)) {
+      SDL_SetError(
+          "Could not mount prefDir '%s' using publisher '%s' / product "
+          "'%s': %s",
+          prefDir, PUBLISHER_NAME, PRODUCT_NAME,
+          PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
+      return false;
+    }
   }
+  // TODO: Implement a mod ordering/loading system instead of direct overrides
+  // PHYSFS_enumerate("/profile/Mods/", mountAssetPaks, (void *)prefDir);
+
+  // Mount loose files in the application dir and then any asset packages
   if (!PHYSFS_mount(baseDir, "/", 1)) {
-    SDL_SetError("Could not mount PhysFS baseDir '%s': %s", baseDir,
+    SDL_SetError("Could not mount baseDir '%s': %s", baseDir,
                  PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
     return false;
   }
-  // PHYSFS_setRoot(PHYSFS_getBaseDir(), "/assets");
-  pimpl_->resMgr.activate();
+  PHYSFS_enumerate("/", mountAssetPaks, nullptr);
+  // PHYSFS_setRoot(baseDir, "/override");
 
   // Log final search paths in debug mode
 #ifdef RENITY_DEBUG
@@ -113,6 +222,10 @@ RENITY_API bool Application::initialize(bool headless) {
   PHYSFS_freeList(pathList);
 #endif
 
+  // Script context needs to not be constructed until AFTER PhysFS is configured
+  pimpl_->scriptContext.reset(new ScriptContext());
+  if (!pimpl_->scriptContext->initialized()) return false;
+
   // Initialize SDL
   Uint32 systems = SDL_INIT_TIMER | SDL_INIT_EVENTS;
   if (!headless) {
@@ -122,6 +235,13 @@ RENITY_API bool Application::initialize(bool headless) {
 
   // TODO: Load window/display settings from app config
   if (!headless) {
+    // Load user profile data
+#ifdef RENITY_DEBUG
+    pimpl_->inputMapper.load("keybinds.json");
+#else
+    pimpl_->inputMapper.load("keybinds.dat");
+#endif
+
     // Default to a window taking up 3/4 of the screen, if over a certain size
     SDL_DisplayID display = SDL_GetPrimaryDisplay();
     SDL_Rect bounds = {0, 0, 0, 0};
@@ -132,15 +252,15 @@ RENITY_API bool Application::initialize(bool headless) {
     if (bounds.w <= 1366 || bounds.h <= 768) {
       pimpl_->window.useFullscreen(true, true);
     } else {
-      bounds.w *= 0.75;
-      bounds.h *= 0.75;
+      // Use 75% of the screen, but without float conversions
+      bounds.w = (bounds.w / 4) * 3;
+      bounds.h = (bounds.h / 4) * 3;
       pimpl_->window.useFullscreen(false, true);
     }
     pimpl_->window.size(renity::Dimension2Di(bounds.w, bounds.h));
     if (!pimpl_->window.open()) {
       return false;
     }
-    pimpl_->renderer = pimpl_->window.getRenderer();
   }
 
   return true;
@@ -148,16 +268,23 @@ RENITY_API bool Application::initialize(bool headless) {
 
 RENITY_API int Application::run() {
   SDL_Event event;
-  bool keepGoing = true;
-  bool show_demo_window;
+  bool keepGoing = true, show_demo_window = false, vsync = true,
+       vsyncLast = true, wireframe = false;
   Uint32 frames = 0;
   Uint64 lastFrameTime = SDL_GetTicksNS();
   Uint64 fpsTime = 0;
-  float fps = 1.0f;
-  Vector<Sprite> sprites;
-  Uint64 spriteCount = 0;
-  srand(SDL_GetTicksNS());
-  // SDL_SetRenderVSync(pimpl_->renderer, 0);
+  int clearColor[3] = {32, 32, 32};
+  Sint32 worldOffset[2] = {pimpl_->window.getCenterPoint().x(),
+                           pimpl_->window.getCenterPoint().y()};
+  float fps = 1.0f, scale = 1.0f, width, height, gamma = 1.0f;
+  float ambient[3] = {0.5f, 0.5f, 0.5f};
+  srand((Uint32)SDL_GetTicksNS());
+  GL_ShaderProgramPtr tileShader =
+      ResourceManager::getActive()->get<GL_ShaderProgram>(
+          "/assets/shaders/tile2d.shader");
+  TileWorldPtr world =
+      ResourceManager::getActive()->get<TileWorld>("/assets/maps/test.world");
+
   while (keepGoing) {
     // Recalculate displayed FPS every second
     const Uint64 timeDelta = SDL_GetTicksNS() - lastFrameTime;
@@ -170,27 +297,8 @@ RENITY_API int Application::run() {
     }
     ++frames;
 
-    // Add more sprites until we start dropping frames
-    // const double realtimeFPS = (double)SDL_NS_PER_SECOND / timeDelta;
-    if (spriteCount < 10) {  // realtimeFPS > 59.9999) {
-      sprites.emplace_back("epic.png");
-      sprites.back().setPosition({pimpl_->window.size().width() / 2,
-                                  pimpl_->window.size().height() / 2});
-      sprites.back().setMoveHeading(rand());
-      ++spriteCount;
-    }
-
-    // Move & draw sprites
-    const double moveSpeed = 650.0f * ((double)timeDelta / SDL_NS_PER_SECOND);
-    for (auto &s : sprites) {
-      s.setMoveSpeed(moveSpeed);
-      int x = s.getPosition().x();
-      int y = s.getPosition().y();
-      if (x < 0 || x > pimpl_->window.size().width()) s.bounceHorizontal();
-      if (y < 0 || y > pimpl_->window.size().height()) s.bounceVertical();
-      s.move();
-      s.draw();
-    }
+    width = (float)pimpl_->window.size().width();
+    height = (float)pimpl_->window.size().height();
 
     // ImGUI demo
     if (show_demo_window) ImGui::ShowDemoWindow(&show_demo_window);
@@ -198,34 +306,45 @@ RENITY_API int Application::run() {
     // 2. Show a simple window that we create ourselves. We use a Begin/End pair
     // to create a named window.
     {
-      static float f = 0.0f;
-      static int counter = 0;
+      ImGui::PushStyleColor(ImGuiCol_TitleBgActive,
+                            IM_COL32(clearColor[0] / 2, clearColor[1] / 2,
+                                     clearColor[2] / 2, 128));
+      ImGui::SetNextWindowSize(ImVec2(0, 235));
+      ImGui::Begin("Settings");
 
-      ImGui::Begin("Hello, world!");  // Create a window called "Hello, world!"
-                                      // and append into it.
-
-      ImGui::Text("Rendering %llu sprites.", spriteCount);
-      ImGui::Checkbox(
-          "Demo Window",
-          &show_demo_window);  // Edit bools storing our window open/close state
-
-      ImGui::SliderFloat(
-          "float", &f, 0.0f,
-          1.0f);  // Edit 1 float using a slider from 0.0f to 1.0f
-      // ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3
-      // floats representing a color
-
-      if (ImGui::Button(
-              "Button"))  // Buttons return true when clicked (most widgets
-                          // return true when edited/activated)
-        counter++;
-      ImGui::SameLine();
-      ImGui::Text("counter = %d", counter);
-
+      // ImGui::Text("Rendering %llu sprites.", spriteCount);
+      ImGui::Checkbox("ImGui Demo Window", &show_demo_window);
+      ImGui::Checkbox("Enable VSync", &vsync);
+      ImGui::Checkbox("Enable wireframe", &wireframe);
+      ImGui::SliderInt3("Background color", clearColor, 0, 255, "#%02X",
+                        ImGuiSliderFlags_AlwaysClamp);
+      ImGui::ColorEdit3("Ambient light", ambient);
+      ImGui::SliderFloat("Gamma correction", &gamma, 0.01f, 4.00f, "%.2f");
+      ImGui::SliderFloat("World scale", &scale, 0.1f, 8.0f, "%.1f");
+      ImGui::SliderInt2("Camera position", worldOffset, -500, 2000);
       ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / fps,
                   fps);
       ImGui::End();
+      ImGui::PopStyleColor();
     }
+    // Set wireframe mode and toggle VSync if requested
+    GL_TileRenderer::enableWireframe(wireframe);
+    if (vsync != vsyncLast) {
+      getWindow()->vsync(vsync);
+      vsyncLast = vsync;
+    }
+
+    // Draw sample world
+    getWindow()->clearColor({(Uint8)clearColor[0], (Uint8)clearColor[1],
+                             (Uint8)clearColor[2], 255});
+    // TODO: Replace with a window-size action listener in TileRenderer
+    // Move scale there too as a settable and/or action listener
+    // Default scale should be SDL_GL_GetDrawableSize / SDL_GetWindowSize
+    tileShader->activate();
+    tileShader->setUniformBlock<float>("ViewParams", {width, height, scale});
+    tileShader->setUniformBlock<float>(
+        "LightingParams", {ambient[0], ambient[1], ambient[2], gamma});
+    world->draw({worldOffset[0], worldOffset[1]}, scale);
 
     // Pump events, then clear them all out after subsystems react to the
     // updates, only listening for quit here. Subsystems should use
@@ -249,15 +368,6 @@ RENITY_API int Application::run() {
   }
 
   return 0;
-}
-
-RENITY_API void Application::destroy() {
-#ifdef RENITY_DEBUG
-  dmon_deinit();
-#endif
-  pimpl_->window.close();
-  SDL_Quit();
-  PHYSFS_deinit();
 }
 
 RENITY_API Window *Application::getWindow() const { return &(pimpl_->window); }

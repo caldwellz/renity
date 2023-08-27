@@ -28,24 +28,44 @@ extern "C" {
 RENITY_API Sint64 RENITY_WriteBufferToPath(const char* dest, const Uint8* src,
                                            Uint32 srcSize);
 
-/** Fill a Uint8 buffer from an SDL_RWops.
- * @param src An RWops already opened for reading.
- * @param destOut A pointer to fill in with the destination char buffer. Left
+/** Fill an unterminated Uint8 buffer from an SDL_RWops.
+ * @param src An RWops already opened for reading. Closes it when finished.
+ * @param bufOut A pointer to fill in with the destination buffer. Left
  * unchanged on failure or if no bytes were read.
  * @param maxSize Max bytes to read.
  * @return The number of bytes read, or -1 on failure.
  */
-RENITY_API Sint64 RENITY_ReadBufferMax(SDL_RWops* src, Uint8** destOut,
-                                       Uint32 maxSize);
+RENITY_API Sint64 RENITY_ReadRawBufferMax(SDL_RWops* src, Uint8** bufOut,
+                                          Uint32 maxSize);
 
-/** Fill a char buffer from an SDL_RWops, up to 16MB.
- * @param src An RWops already opened for reading.
- * @param destOut A pointer to fill in with the destination char buffer.
+/** Fill an unterminated Uint8 buffer from an SDL_RWops, up to 16MB.
+ * @param src An RWops already opened for reading. Closes it when finished.
+ * @param bufOut A pointer to fill in with the destination buffer.
  * Left unchanged on failure or if no bytes were read.
  * @return The number of bytes read, or -1 on failure.
  */
-#define RENITY_ReadBuffer(src, destOut) \
-  RENITY_ReadBufferMax(src, destOut, 1 << 24)
+#define RENITY_ReadRawBuffer(src, bufOut) \
+  RENITY_ReadRawBufferMax(src, bufOut, 1 << 24)
+
+/** Fill a null-terminated char buffer from an SDL_RWops.
+ * @param src An RWops already opened for reading. Closes it when finished.
+ * @param bufOut A pointer to fill in with the destination char buffer. Left
+ * unchanged on failure or if no bytes were read.
+ * @param maxSize Max bytes to read.
+ * @return The number of bytes read, or -1 on failure.
+ */
+RENITY_API Sint64 RENITY_ReadCharBufferMax(SDL_RWops* src, char** bufOut,
+                                           Uint32 maxSize);
+
+/** Fill a null-terminated char buffer from an SDL_RWops, up to 16MB.
+ * @param src An RWops already opened for reading. Closes it when finished.
+ * @param bufOut A pointer to fill in with the destination char buffer.
+ * Left unchanged on failure, or a ptr to a single null if no bytes were read.
+ * @return The number of bytes read (not including null terminator), or -1 on
+ * failure.
+ */
+#define RENITY_ReadCharBuffer(src, bufOut) \
+  RENITY_ReadCharBufferMax(src, bufOut, 1 << 24)
 
 #ifdef __cplusplus
 }

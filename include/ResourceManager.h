@@ -28,11 +28,12 @@ class RENITY_API ResourceManager {
   ResourceManager &operator=(ResourceManager &other) = delete;
   ResourceManager &operator=(const ResourceManager &other) = delete;
 
-  /** Get a Resource from a PhysFS file.
+  /** Get a Resource from a PhysFS file, or generate a blank one in memory.
    * Keeps it in a context-specific cache.
-   * @param path Filename to read, in platform-independent notation.
-   * @return A Resource representing the file's data, or default data on an
-   * error.
+   * @param path Filename to read, in platform-independent notation,
+   * or a name in <angle brackets> to generate a cached in-memory Resource.
+   * @return A Resource representing a file's data, or default data if there was
+   * an error or a request to generate a temporary Resource.
    */
   template <typename T>
   SharedPtr<T> get(const char *path) {
@@ -45,16 +46,19 @@ class RENITY_API ResourceManager {
    * \returns A pointer to the last-activated ResourceManager, or null if none
    * are valid.
    */
-  static ResourceManager *getActive() {
-    extern ResourceManager *currentManager;
-    return currentManager;
-  }
+  static ResourceManager *getActive();
 
   /** Activate this ResourceManager.
    * Makes it the "current" manager for any subsequent resource operations.
-   * This is useful for e.g. Textures, which are Window-specific.
+   * This is useful for e.g. GL_Shaders, which are Window-specific.
    */
   void activate();
+
+  /** Update the ResourceManager.
+   * Reloads any cached resources which have changed on disk.
+   * Rendering threads should use this to reload Window-specific resources.
+   */
+  void update();
 
   /** Clear this ResourceManager's contents.
    * Effectively de-activates it and removes everything from the resource cache.

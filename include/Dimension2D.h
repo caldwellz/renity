@@ -60,7 +60,7 @@ class Dimension2D {
    */
   T getArea() const { return width_ * height_; }
 
- private:
+ protected:
   T width_, height_;
 };
 

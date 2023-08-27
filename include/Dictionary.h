@@ -9,6 +9,7 @@
  ***************************************************/
 #pragma once
 
+#include "3rdparty/duktape/duktape.h"
 #include "Resource.h"
 #include "types.h"
 
@@ -21,8 +22,17 @@ class RENITY_API Dictionary : public Resource {
 
   void load(SDL_RWops *src);
 
+  /** Save Dictionary contents to a file.
+   * @param destPath Destination PhysFS path. File extension will determine what
+   * format it saves in, defaulting to CBOR for ones it doesn't recognize.
+   * @param selectionOnly Whether to save just the current selection, or the
+   * entire Dictionary.
+   * @return True if the operation succeeded, false otherwise.
+   */
+  bool save(const char *destPath, bool selectionOnly = false);
+
   /** Save Dictionary contents to a JSON file.
-   * @param destPath Destination file path. Contents will always be written as
+   * @param destPath Destination PhysFS path. Contents will always be written as
    * JSON, regardless of file extension.
    * @param selectionOnly Whether to save just the current selection, or the
    * entire Dictionary.
@@ -31,7 +41,7 @@ class RENITY_API Dictionary : public Resource {
   bool saveJSON(const char *destPath, bool selectionOnly = false);
 
   /** Save Dictionary contents to a CBOR file.
-   * @param destPath Destination file path. Contents will always be written as
+   * @param destPath Destination PhysFS path. Contents will always be written as
    * CBOR, regardless of file extension.
    * @param selectionOnly Whether to save just the current selection, or the
    * entire Dictionary.
@@ -75,6 +85,9 @@ class RENITY_API Dictionary : public Resource {
    * @return The ending index, or UINT32_MAX if the indices aren't enumerable.
    */
   Uint32 end(const char *key = nullptr);
+
+  /** Determine whether the given path is an array. */
+  bool isArray(const char *path);
 
   /** Enumerate an object or array using a callback.
    * @param path A path to enumerate.
@@ -137,6 +150,13 @@ class RENITY_API Dictionary : public Resource {
   template <typename T>
   bool push(T val);
 
+  /** Pop a value of the given type from the end of the selected array.
+   * @param valOut Where to store the value, if one exists. Can be a nullptr.
+   * @return True if an array value existed and was removed, false otherwise.
+   */
+  template <typename T>
+  bool pop(T *valOut);
+
   /** Store a Property value of the given type.
    * @param key The key to store the value under.
    * @param val The value to store. Will overwrite a previous value of any type.
@@ -182,7 +202,7 @@ class RENITY_API Dictionary : public Resource {
   }
 
  protected:
-  void *getContext();
+  duk_context *getContext();
   size_t select(const char *path, bool autoCreate, bool loadValue);
 
  private:

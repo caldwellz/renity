@@ -11,7 +11,6 @@
 #include "utils/surface_utils.h"
 
 #include <SDL3/SDL.h>
-#include <SDL3/SDL_main.h>
 #include <assert.h>
 #include <physfs.h>
 
@@ -30,7 +29,7 @@ int main(int argc, char *argv[]) {
   assert(PHYSFS_mountMemory(hoodArchive, hoodArchiveLen, NULL, hoodArchiveName,
                             NULL, 1));
   assert(SDL_Init(SDL_INIT_VIDEO) == 0);
-  SDL_Window *window = SDL_CreateWindow("Image test", 0, 0, 128, 128, 0);
+  SDL_Window *window = SDL_CreateWindow("Image test", 128, 128, 0);
   assert(window);
   SDL_Renderer *renderer = SDL_CreateRenderer(window, NULL, 0);
   assert(renderer);

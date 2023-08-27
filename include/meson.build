@@ -15,15 +15,21 @@ lib_headers = [
     conffile
   , 'types.h'
   , 'version.h'
+  , 'Action.h'
+  , 'ActionHandler.h'
+  , 'ActionManager.h'
   , 'Dictionary.h'
   , 'Dimension2D.h'
+#  , 'EntityManager.h'
+  , 'GL_PointRenderer.h'
+  , 'GL_TileRenderer.h'
   , 'HashTable.h'
+  , 'InputMapper.h'
   , 'Point2D.h'
   , 'Rect2D.h'
   , 'Resource.h'
   , 'ResourceManager.h'
   , 'Sprite.h'
-  , 'Texture.h'
   , 'Window.h'
 ]
 
@@ -32,4 +38,5 @@ base_include_subdir = meson.project_name()
 install_headers(lib_headers, subdir : meson.project_name())
 
 # Process subdirectories
+subdir('resources')
 subdir('utils')

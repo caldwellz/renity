@@ -28,18 +28,29 @@ endif
 
 # - C math library (usually only needed on Linux)
 dep_m = cppcomp.find_library('m', required : false)
-lib_deps = [dep_sdl, dep_sdlimage, dep_physfs, dep_m]
+lib_deps = [
+  dep_sdl
+, dep_sdlimage
+, dep_physfs
+, dep_m
+]
 
 # List sources and process subdirectories - version file comes later
 lib_srcs = files([
-  'Application.cc'
+  'Action.cc'
+, 'ActionManager.cc'
+, 'Application.cc'
 , 'Dictionary.cc'
+#, 'EntityManager.cc'
+, 'GL_PointRenderer.cc'
+, 'GL_TileRenderer.cc'
+, 'InputMapper.cc'
 , 'ResourceManager.cc'
-, 'Sprite.cc'
-, 'Texture.cc'
+#, 'Sprite.cc'
 , 'Window.cc'
 ])
 subdir('3rdparty')
+subdir('resources')
 subdir('utils')
 
 
@@ -63,8 +74,9 @@ endif
 # Configure version file
 version_data = configuration_data()
 version_data.set('publisher', get_option('PUBLISHER_NAME'))
+version_data.set('product_name', get_option('PRODUCT_NAME'))
+version_data.set('engine_name', meson.project_name())
 version_data.set('description', get_option('PRODUCT_DESCRIPTION'))
-version_data.set('name', meson.project_name())
 version_data.set('version', version_str)
 version_data.set('version_major', version_parts[0])
 version_data.set('version_minor', version_parts[1])

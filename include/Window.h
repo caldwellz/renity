@@ -11,7 +11,9 @@
 #ifndef RENITY_WINDOW_H_
 #define RENITY_WINDOW_H_
 
-#include <SDL3/SDL_render.h>
+#include <SDL3/SDL_events.h>
+#include <SDL3/SDL_pixels.h>
+#include <SDL3/SDL_video.h>
 
 #include "Dimension2D.h"
 #include "Point2D.h"
@@ -35,19 +37,16 @@ class RENITY_API Window {
   /** Get the active (current) Window.
    * \returns A pointer to the last-activated Window, or null if none are open.
    */
-  static Window *getActive() {
-    extern Window *currentWindow;
-    return currentWindow;
-  }
+  static Window *getActive();
 
   /** Check whether the window is currently open.
-   * \returns True if the window is currently open (and hardware-accelerated), \
+   * \returns True if the window is currently open (and hardware-accelerated),
    * false otherwise.
    */
   bool isOpen() const;
 
   /** Open/create the window.
-   * \returns True if the window was successfully opened (or was already open) \
+   * \returns True if the window was successfully opened (or was already open)
    * with hardware acceleration, false otherwise.
    */
   bool open();
@@ -56,7 +55,7 @@ class RENITY_API Window {
   void close();
 
   /** Activate the window.
-   * Brings it into focus and makes it the "current" window for any \
+   * Brings it into focus and makes it the "current" window for any
    * subsequent rendering.
    * \returns True if the window was activated successfully, false otherwise.
    */
@@ -64,21 +63,43 @@ class RENITY_API Window {
 
   /** Update the window.
    * Swaps buffers, processes window events, etc.
-   * \returns True if the update succeeded and the window was not closed \
+   * \returns True if the update succeeded and the window was not closed
    * (either by code or by the user); false otherwise.
    */
   bool update();
 
-  /** Get the internal SDL_WindowID or the window.
+  /** Get the clear color of the window's backbuffer.
+   * \returns The RGBA color that every frame is currently cleared with.
+   */
+  SDL_Color clearColor() const;
+
+  /** Set the clear color of the window's backbuffer.
+   * \param color The RGBA color to clear with on every frame.
+   */
+  void clearColor(const SDL_Color color);
+
+  /** Get the current vsync state.
+   * \returns True if vsync has been successfully enabled; false otherwise.
+   */
+  bool vsync() const;
+
+  /** Set the current vsync state (enabled or disabled).
+   * Tries "adaptive" vsync first, and if unsupported, falls back to regular.
+   * \returns True if vsync state was successfully changed; false on failure.
+   */
+  bool vsync(bool enable);
+
+  /** Get the internal SDL_WindowID of the window.
    * \returns The numeric ID of the window, or 0 on failure.
    */
   SDL_WindowID getWindowID() const;
 
-  /** Get the internal SDL_Renderer or the window.
-   * \returns An SDL_Renderer pointer if the window is open and there is a \
-   * valid renderer; NULL otherwise.
+  /** Get the internal OpenGL context of the window.
+   * \returns An opaque OpenGL context if the window is open; NULL otherwise.
+   * Note that it may not be the CURRENT context, unless the window is also
+   * active.
    */
-  SDL_Renderer *getRenderer() const;
+  SDL_GLContext getGlContext() const;
 
   /** Get the current title of the window.
    * Can be called at any time (before or after open() or close()).
@@ -109,7 +130,10 @@ class RENITY_API Window {
   /** Set the window's position to be centered on the display.
    * Can be called any time (before or after open() or close()).
    */
-  void centerPosition();
+  void centerOnDisplay();
+
+  /** Get the center point of the window's width and height, in pixels. */
+  Point2Di32 getCenterPoint() const;
 
   /** Get the window's size.
    * Uses an i32 for consistency, even though a u16 should be quite sufficient.

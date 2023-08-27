@@ -1,0 +1,34 @@
+{
+    "maps": [
+        {
+            "fileName": "/assets/maps/test1.tmj",
+            "height": 960,
+            "width": 960,
+            "x": 0,
+            "y": 0
+        },
+        {
+            "fileName": "/assets/maps/test2.tmj",
+            "height": 1280,
+            "width": 1280,
+            "x": 960,
+            "y": 0
+        },
+        {
+            "fileName": "/assets/maps/test1.tmj",
+            "height": 960,
+            "width": 960,
+            "x": 960,
+            "y": 960
+        },
+        {
+            "fileName": "/assets/maps/test2.tmj",
+            "height": 1280,
+            "width": 1280,
+            "x": 0,
+            "y": 960
+        }
+    ],
+    "onlyShowAdjacentMaps": false,
+    "type": "world"
+}

@@ -30,7 +30,7 @@ class Point2D {
    * \param x The initial x coordinate.
    * \param y The initial y coordinate.
    */
-  Point2D(const T &x, const T &y) {
+  Point2D(const T& x, const T& y) {
     x_ = x;
     y_ = y;
   }
@@ -45,7 +45,7 @@ class Point2D {
   /** Set the x coordinate.
    * \param x The new x coordinate value.
    */
-  void x(const T &new_x) { x_ = new_x; }
+  void x(const T& new_x) { x_ = new_x; }
 
   /** Get the y coordinate.
    * \returns The current y coordinate value.
@@ -55,7 +55,7 @@ class Point2D {
   /** Set the y coordinate.
    * \param x The new y coordinate value.
    */
-  void y(const T &new_y) { y_ = new_y; }
+  void y(const T& new_y) { y_ = new_y; }
 
   /** Utility function that returns the current Point as an SDL_Point.
    * \todo Determine/perform more appropriate conversions.
@@ -79,11 +79,39 @@ class Point2D {
     return point;
   }
 
-  // TODO: Mathematical operators here
+  bool operator==(const Point2D& rhs) {
+    return (x_ == rhs.x() && y_ == rhs.y());
+  }
 
- private:
+  bool operator!=(const Point2D& rhs) { return !(*this == rhs); }
+
+  Point2D& operator+=(const Point2D& rhs) {
+    x_ += rhs.x_;
+    y_ += rhs.y_;
+    return *this;
+  }
+
+  Point2D& operator-=(const Point2D& rhs) {
+    x_ -= rhs.x_;
+    y_ -= rhs.y_;
+    return *this;
+  }
+
+ protected:
   T x_, y_;
 };
+
+template <typename T>
+inline Point2D<T> operator+(Point2D<T> lhs, const Point2D<T>& rhs) {
+  lhs += rhs;
+  return lhs;
+}
+
+template <typename T>
+inline Point2D<T> operator-(Point2D<T> lhs, const Point2D<T>& rhs) {
+  lhs -= rhs;
+  return lhs;
+}
 
 using Point2Di = Point2D<int>;
 using Point2Di16 = Point2D<int16_t>;
