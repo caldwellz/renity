@@ -83,7 +83,7 @@ struct InputMapper::Impl : public ActionHandler {
     if (action->getId() == mapChange) {
       ActionId actId = action->getDataAs<ActionId>(0);
       Uint32 inputHash = action->getDataAs<Uint32>(1);
-      mapDict.putIndex<ActionId>(inputHash, actId);
+      mapDict.putAt<ActionId>(inputHash, actId);
 #ifdef RENITY_DEBUG
       // Only auto-save in debug since it removes the abiity to cancel changes
       // TODO: Add action triggers for load/save?
@@ -97,13 +97,13 @@ struct InputMapper::Impl : public ActionHandler {
     ActionId actId;
     for (Uint8 clicks = clickCount; clicks >= 1; --clicks) {
       // Check only keyboard-type modifiers until joystick/gp support is added
-      if (mapDict.getIndex<ActionId>(
+      if (mapDict.getAt<ActionId>(
               getButtonHash(source, btn, clicks, (Uint16)SDL_GetModState()),
               &actId))
         return actId;
 
       // Games also use modifiers as regular action keys, so check unmodded too
-      if (mapDict.getIndex<ActionId>(getButtonHash(source, btn, clicks, 0),
+      if (mapDict.getAt<ActionId>(getButtonHash(source, btn, clicks, 0),
                                      &actId))
         return actId;
     }
@@ -135,7 +135,7 @@ struct InputMapper::Impl : public ActionHandler {
 
   ActionId getAxisAction(Uint8 source, Uint32 instance, Uint16 axis) {
     ActionId actId;
-    if (mapDict.getIndex<ActionId>(getAxisHash(source, instance, axis),
+    if (mapDict.getAt<ActionId>(getAxisHash(source, instance, axis),
                                    &actId)) {
       return actId;
     }

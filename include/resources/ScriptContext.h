@@ -9,11 +9,12 @@
  ***************************************************/
 #pragma once
 
-#include "Dictionary.h"
+#include "3rdparty/duktape/duktape.h"
+#include "Resource.h"
 #include "types.h"
 
 namespace renity {
-class RENITY_API ScriptContext : public Dictionary {
+class RENITY_API ScriptContext : public Resource {
  public:
   ScriptContext();
   ~ScriptContext();
@@ -38,7 +39,6 @@ class RENITY_API ScriptContext : public Dictionary {
  protected:
   friend class ResourceManager;
   void load(SDL_RWops* src);
-  void setupGlobalEnv();
 
  private:
   struct Impl;

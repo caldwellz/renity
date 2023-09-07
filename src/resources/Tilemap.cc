@@ -139,7 +139,7 @@ RENITY_API void Tilemap::load(SDL_RWops *src) {
 
       // Layers should be the same size as the map; ignore missing/extra tiles
       Uint32 tileId = 0;
-      dict.getIndex(tileNum, &tileId);
+      dict.getAt(tileNum, &tileId);
       if (tileId == 0) {
         // Also ignore blank/empty tiles (indexes always start at 1)
         continue;

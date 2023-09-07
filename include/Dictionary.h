@@ -18,6 +18,7 @@ namespace renity {
 class RENITY_API Dictionary : public Resource {
  public:
   Dictionary();
+  Dictionary(duk_context *existingCtx);
   ~Dictionary();
 
   void load(SDL_RWops *src);
@@ -127,7 +128,14 @@ class RENITY_API Dictionary : public Resource {
    * @return True if the value exists, false otherwise.
    */
   template <typename T>
-  bool getIndex(Uint32 index, T *valOut);
+  bool getAt(Uint32 index, T *valOut);
+
+  /** Get a Property value as a PrimitiveVariant.
+   * @param index An index into the currently-selected path to get the value of.
+   * @param valOut A variant reference to store the value in, if found.
+   * @return True if the value exists, false otherwise.
+   */
+  bool getVariantAt(Uint32 index, PrimitiveVariant &valOut);
 
   /** Create an array at a given path.
    * @param key The key to store the array under.
@@ -171,7 +179,14 @@ class RENITY_API Dictionary : public Resource {
    * @return True if the value was able to be stored, false otherwise.
    */
   template <typename T>
-  bool putIndex(Uint32 index, T val);
+  bool putAt(Uint32 index, T val);
+
+  /** Store a PrimitiveVariant as a Property value.
+   * @param index An index into the currently-selected path to set the value of.
+   * @param val The value to store. Will overwrite a previous value of any type.
+   * @return True if the value was able to be stored, false otherwise.
+   */
+  bool putVariantAt(Uint32 index, const PrimitiveVariant &val);
 
   /** Get a Property value, or a default value, of the given type.
    * @param key A key to attempt to get the value of.
@@ -194,10 +209,10 @@ class RENITY_API Dictionary : public Resource {
    * @return Either the stored value or the default value, as appropriate.
    */
   template <typename T>
-  T keepIndex(Uint32 index, T defaultVal) {
+  T keepAt(Uint32 index, T defaultVal) {
     T storedVal;
-    if (getIndex<T>(index, &storedVal)) return storedVal;
-    putIndex<T>(index, defaultVal);
+    if (getAt<T>(index, &storedVal)) return storedVal;
+    putAt<T>(index, defaultVal);
     return defaultVal;
   }
 

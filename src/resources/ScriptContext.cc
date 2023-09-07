@@ -11,77 +11,53 @@
 
 #include <SDL3/SDL_log.h>
 
+#include "ActionHandler.h"
+#include "ActionManager.h"
+#include "Dictionary.h"
 #include "ResourceManager.h"
 #include "resources/StringBuffer.h"
+#include "utils/id_helpers.h"
 
 namespace renity {
-struct ScriptContext::Impl {
-  explicit Impl() : initialized(false) {}
-  ~Impl() {}
-
+struct ScriptActionHandler : public ActionHandler {
   duk_context* ctx;
-  bool initialized;
+  void handleAction(const ActionCategoryId categoryId, const Action* action) {
+    duk_idx_t origTop = duk_get_top(ctx);
+    duk_push_heap_stash(ctx);
+    if (!duk_get_prop_string(ctx, -1, "categoryHandlers") ||
+        !duk_get_prop_index(ctx, -1, categoryId) || !duk_is_function(ctx, -1)) {
+      SDL_LogError(
+          SDL_LOG_CATEGORY_APPLICATION,
+          "ScriptActionHandler::handleAction: JS categoryHandler is missing "
+          "for "
+          "ActionCategoryId 0x%#08x ('%s')",
+          categoryId,
+          ActionManager::getActive()->getNameFromId(categoryId).c_str());
+      duk_set_top(ctx, origTop);
+      return;
+    }
+
+    // Use the action name and an array of values as args for the actionHandler
+    duk_push_string(ctx, action->getName().c_str());
+    duk_push_bare_array(ctx);
+    Dictionary dictWrapper(ctx);
+    for (Uint32 dataIndex = 0; dataIndex < action->getDataCount();
+         ++dataIndex) {
+      dictWrapper.putVariantAt(dataIndex, action->getData(dataIndex));
+    }
+    if (duk_pcall(ctx, 2) != 0) {
+      SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                   "ScriptContext::handleAction: JS actionHandler failed for "
+                   "ActionId 0x%#08x ('%s') with '%s'",
+                   action->getId(), action->getName().c_str(),
+                   duk_safe_to_string(ctx, -1));
+    }
+    // Ignore the return value until request/response actions are implemented
+    duk_set_top(ctx, origTop);
+  }
 };
 
-RENITY_API ScriptContext::ScriptContext() : Dictionary() {
-  pimpl_ = new Impl();
-  setupGlobalEnv();
-}
-
-RENITY_API ScriptContext::~ScriptContext() { delete pimpl_; }
-/*
-// Error/debug logger helper for bound functions
-static void loggerHelper(duk_context* ctx, const char* func, const char* msg) {
-    SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "[Script] console.log: %s",
-duk_safe_to_string(ctx, 0)); return 0;
-}
-*/
-RENITY_API bool ScriptContext::initialized() { return pimpl_->initialized; }
-
-RENITY_API bool ScriptContext::evalFile(String path) {
-  StringBufferPtr buf =
-      ResourceManager::getActive()->get<StringBuffer>(path.c_str());
-  if (!buf->length()) return false;
-  duk_int_t result =
-      duk_peval_lstring(pimpl_->ctx, buf->getCStr(), buf->length());
-  bool success = true;
-  if (result == 0) {
-    if (duk_get_boolean_default(pimpl_->ctx, -1, 1) == 0) {
-      success = false;
-      SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
-                   "ScriptContext::evalFile: '%s' compiled successfully "
-                   "but returned a boolean false.",
-                   path.c_str());
-      SDL_SetError("Script evaluation returned false.");
-    }
-  } else {
-    success = false;
-    const char* error = duk_safe_to_string(pimpl_->ctx, -1);
-    SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                 "ScriptContext::evalFile: '%s' failed with '%s'", path.c_str(),
-                 error);
-    SDL_SetError("Script evaluation encountered '%s'.", error);
-  }
-  duk_pop(pimpl_->ctx);
-  return success;
-}
-
-RENITY_API void ScriptContext::registerFunc(String path, duk_c_function func,
-                                            duk_idx_t nargs) {
-  duk_require_stack(pimpl_->ctx, 1);
-  duk_push_global_object(pimpl_->ctx);
-  size_t depth = 1 + select(path.c_str(), true, false);
-  duk_require_stack(pimpl_->ctx, 1);
-  duk_push_c_lightfunc(pimpl_->ctx, func, nargs, nargs, 0);
-  duk_put_prop(pimpl_->ctx, -3);
-  unwind(depth);
-}
-
-RENITY_API void ScriptContext::load(SDL_RWops* src) {
-  // Dictionary resets the global object on reload, so recreate the environment
-  Dictionary::load(src);
-  setupGlobalEnv();
-}
+/***** Auto-bound script helper functions *****/
 
 // Debug logger
 // TODO: Allow varying numbers of arguments
@@ -160,23 +136,205 @@ static duk_ret_t scriptRequire(duk_context* ctx) {
   return 1;  // [..., global, module, exports]
 }
 
-RENITY_API void ScriptContext::setupGlobalEnv() {
-  // Get the automatically-managed heap/context from the inherited Dictionary
-  pimpl_->ctx = this->getContext();
+// Actions.assignCategory
+static duk_ret_t scriptAssignCategory(duk_context* ctx) {
+  if (!duk_is_string(ctx, 0) || !duk_is_string(ctx, 1)) {
+    SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                 "[Script] Actions.assignCategory: Invalid parameter type(s)");
+    duk_push_uint(ctx, 0);
+    return 1;
+  }
 
-  // Register a debug logger and module loader
-  registerFunc("console.log", &scriptConsoleLog, 1);
-  registerFunc("require", &scriptRequire, 1);
+  const char* actionName = duk_get_string(ctx, 0);
+  const char* categoryName = duk_get_string(ctx, 1);
+  ActionId id =
+      ActionManager::getActive()->assignCategory(actionName, categoryName);
+  duk_push_uint(ctx, id);
+  return 1;
+}
 
-  // Create a globalThis reference to the global object
-  duk_push_global_object(pimpl_->ctx);
-  duk_push_global_object(pimpl_->ctx);
-  duk_put_prop_string(pimpl_->ctx, -2, "globalThis");
-  duk_push_string(pimpl_->ctx, "bar");
-  duk_put_prop_string(pimpl_->ctx, -2, "foo");
+// Actions.post
+static duk_ret_t scriptPostAction(duk_context* ctx) {
+  // Param extraction and type validation
+  ActionId id = 0;
+  if (duk_is_string(ctx, 0)) {
+    const char* actionName = duk_get_string(ctx, 0);
+    id = getId(actionName);
+  } else if (duk_is_number(ctx, 0)) {
+    id = duk_get_uint(ctx, 0);
+  } else {
+    SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                 "[Script] Actions.post: Invalid action identifier type");
+    return 0;
+  }
+  if (!duk_is_array(ctx, 1)) {
+    SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                 "[Script] Actions.post: Invalid data array");
+    return 0;
+  }
+
+  // Stack top is a data array; wrap it in a Dictionary interface and enumerate
+  PrimitiveVariant dataItem;
+  Vector<PrimitiveVariant> actionData;
+  Dictionary dictWrapper(ctx);
+  for (Uint32 index = 0; index < dictWrapper.end(); ++index) {
+    if (!dictWrapper.getVariantAt(index, dataItem)) {
+      SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                   "[Script] Actions.post: Invalid data item at index %u",
+                   index);
+      return 0;
+    }
+    actionData.push_back(dataItem);
+  }
+  ActionManager::getActive()->post({id, actionData});
+  return 0;
+}
+
+// Actions.subscribe
+static duk_ret_t scriptSubscribe(duk_context* ctx) {
+  if (!duk_is_string(ctx, 0) || !duk_is_function(ctx, 1)) {
+    SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                 "[Script] Actions.subscribe: Invalid parameter type(s)");
+    return 0;
+  }
+
+  // Register the handler for this action
+  const char* catName = duk_get_string(ctx, 0);
+  ScriptActionHandler* handler = new ScriptActionHandler;
+  handler->ctx = ctx;
+  ActionCategoryId catId =
+      ActionManager::getActive()->subscribe(ActionHandlerPtr(handler), catName);
+
+  // Store a callback function reference in the stash
+  duk_push_heap_stash(ctx);
+  duk_get_prop_string(ctx, -1, "categoryHandlers");
+  duk_dup(ctx, 1);
+  duk_put_prop_index(ctx, -2, catId);
+  return 0;
+}
+
+// Helpers.getId
+static duk_ret_t scriptGetId(duk_context* ctx) {
+  if (duk_is_string(ctx, 0)) {
+    const char* key = duk_get_string(ctx, 0);
+    Id keyId = getId(key);
+    duk_push_number(ctx, (duk_double_t)keyId);
+  } else {
+    duk_push_number(ctx, 0.0);
+    SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                 "[Script] Helpers.getId: Param 0 is not a string");
+  }
+  return 1;
+}
+/***** End of script helper functions *****/
+
+struct ScriptContext::Impl : public Dictionary {
+  explicit Impl() : Dictionary(), initialized(false) {
+    setupGlobalEnv();
+
+    // Set up an action callback array in the heap stash for helpers to use;
+    // only needs to happen once after Dict heap creation, not on every load.
+    duk_require_stack(ctx, 2);
+    duk_push_heap_stash(ctx);
+    duk_push_bare_array(ctx);
+    duk_put_prop_literal(ctx, -2, "categoryHandlers");
+    duk_pop(ctx);
+  }
+
+  ~Impl() {}
+
+  // Interface class needs access to load(), full select(), etc.
+  friend class ScriptContext;
+
+  void registerFunc(const String& path, duk_c_function func, duk_idx_t nargs) {
+    duk_require_stack(ctx, 1);
+    duk_push_global_object(ctx);
+    size_t depth = 1 + select(path.c_str(), true, false);
+    duk_require_stack(ctx, 1);
+    duk_idx_t length = nargs == DUK_VARARGS ? 1 : nargs;
+    duk_push_c_lightfunc(ctx, func, nargs, length, 0);
+    duk_put_prop(ctx, -3);
+    unwind(depth);
+  }
+
+  void setupGlobalEnv() {
+    // Get the automatically-managed heap/context from the inherited Dictionary
+    ctx = getContext();
+
+    // Register a debug logger and module loader
+    registerFunc("console.log", &scriptConsoleLog, 1);
+    registerFunc("require", &scriptRequire, 1);
+
+    // Register Actions and Helpers bindings
+    registerFunc("Actions.assignCategory", &scriptAssignCategory, 2);
+    registerFunc("Actions.post", &scriptPostAction, 2);
+    registerFunc("Actions.subscribe", &scriptSubscribe, 2);
+    registerFunc("Helpers.getId", &scriptGetId, 1);
+
+    // Create a globalThis reference to the global object
+    duk_push_global_object(ctx);
+    duk_push_global_object(ctx);
+    duk_put_prop_string(ctx, -2, "globalThis");
+    duk_pop(ctx);
+  }
+
+  duk_context* ctx;
+  bool initialized;
+};
+
+RENITY_API ScriptContext::ScriptContext() {
+  pimpl_ = new Impl();
+  pimpl_->initialized = evalFile("/assets/scripts/init.js");
+}
+
+RENITY_API ScriptContext::~ScriptContext() { delete pimpl_; }
+/*
+// Error/debug logger helper for bound functions
+static void loggerHelper(duk_context* ctx, const char* func, const char* msg) {
+    SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "[Script] console.log: %s",
+duk_safe_to_string(ctx, 0)); return 0;
+}
+*/
+RENITY_API bool ScriptContext::initialized() { return pimpl_->initialized; }
+
+RENITY_API bool ScriptContext::evalFile(String path) {
+  StringBufferPtr buf =
+      ResourceManager::getActive()->get<StringBuffer>(path.c_str());
+  if (!buf->length()) return false;
+  duk_int_t result =
+      duk_peval_lstring(pimpl_->ctx, buf->getCStr(), buf->length());
+  bool success = true;
+  if (result == 0) {
+    if (duk_get_boolean_default(pimpl_->ctx, -1, 1) == 0) {
+      success = false;
+      SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
+                   "ScriptContext::evalFile: '%s' compiled successfully "
+                   "but returned a boolean false.",
+                   path.c_str());
+      SDL_SetError("Script evaluation returned false.");
+    }
+  } else {
+    success = false;
+    const char* error = duk_safe_to_string(pimpl_->ctx, -1);
+    SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                 "ScriptContext::evalFile: '%s' failed with '%s'", path.c_str(),
+                 error);
+    SDL_SetError("Script evaluation encountered '%s'.", error);
+  }
   duk_pop(pimpl_->ctx);
+  return success;
+}
 
-  // (Re)run init script to set things up on JS side
+RENITY_API void ScriptContext::registerFunc(String path, duk_c_function func,
+                                            duk_idx_t nargs) {
+  pimpl_->registerFunc(path, func, nargs);
+}
+
+RENITY_API void ScriptContext::load(SDL_RWops* src) {
+  pimpl_->load(src);
+
+  // Reset env and rerun init script to set things up on JS side
+  pimpl_->setupGlobalEnv();
   pimpl_->initialized = evalFile("/assets/scripts/init.js");
 }
 }  // namespace renity

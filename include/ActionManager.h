@@ -47,9 +47,9 @@ class RENITY_API ActionManager {
 
   /** Post a new Action to the handler queue.
    * This is safe to call from any thread, including from handler callbacks.
-   * @param action The Action to be handled.
+   * \param action The Action to be handled.
    * Category handlers will run in registration order, but often simultaneously.
-   * @return True if the actionId is registered to a category that has at least
+   * \returns True if the actionId is registered to a category that has at least
    * one handler registered; false otherwise.
    */
   bool post(Action action);
@@ -57,11 +57,12 @@ class RENITY_API ActionManager {
   /** Add an ActionHandler to a given category.
    * Note that all side effects of the handler *must* be thread safe, since it
    * may be called from several different worker threads *simultaneously*.
+   * \returns The id of the category name, to make static assignment easier.
    */
-  void subscribe(ActionHandlerPtr handler, String actionCategory);
+  ActionCategoryId subscribe(ActionHandlerPtr handler, String actionCategory);
 
   /** (Re)assign an ActionId to a category.
-   * @return The id of the action name, to make static assignment easier.
+   * \returns The id of the action name, to make static assignment easier.
    */
   ActionId assignCategory(String actionName, String actionCategory);
 

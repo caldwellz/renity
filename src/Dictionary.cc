@@ -13,28 +13,44 @@
 #include <SDL3/SDL_log.h>
 #include <SDL3/SDL_stdinc.h>
 
+#include <cfloat>
+#include <cmath>
+
 #include "3rdparty/duktape/duktape.h"
 #include "utils/rwops_utils.h"
 #include "utils/string_helpers.h"
 
 namespace renity {
 struct Dictionary::Impl {
-  Impl() {
-    ctx = duk_create_heap_default();
-    duk_push_bare_object(ctx);
-    duk_set_global_object(ctx);
-    duk_push_global_object(ctx);
+  Impl(duk_context *existingCtx) {
+    if (existingCtx) {
+      sharedCtx = true;
+      ctx = existingCtx;
+    } else {
+      sharedCtx = false;
+      ctx = duk_create_heap_default();
+      duk_push_bare_object(ctx);
+      duk_set_global_object(ctx);
+      duk_push_global_object(ctx);
+    }
   }
 
   ~Impl() {
-    duk_set_top(ctx, 0);
-    duk_destroy_heap(ctx);
+    if (!sharedCtx) {
+      duk_set_top(ctx, 0);
+      duk_destroy_heap(ctx);
+    }
   }
 
   duk_context *ctx;
+  bool sharedCtx;
 };
 
-RENITY_API Dictionary::Dictionary() { pimpl_ = new Impl(); }
+RENITY_API Dictionary::Dictionary() { pimpl_ = new Impl(nullptr); }
+
+RENITY_API Dictionary::Dictionary(duk_context *existingCtx) {
+  pimpl_ = new Impl(existingCtx);
+}
 
 RENITY_API Dictionary::~Dictionary() { delete this->pimpl_; }
 
@@ -462,6 +478,75 @@ RENITY_API Uint32 Dictionary::enumerateArray(
   return props;
 }
 
+RENITY_API bool Dictionary::getVariantAt(Uint32 index,
+                                         PrimitiveVariant &valOut) {
+  duk_get_prop_index(pimpl_->ctx, -1, index);
+  duk_int_t valType = duk_get_type(pimpl_->ctx, -1);
+  duk_double_t dblVal;
+  float fltVal, roundedVal;
+  bool success = true;
+  switch (valType) {
+    case DUK_TYPE_NULL:
+      valOut = (void *)nullptr;
+      break;
+    case DUK_TYPE_BOOLEAN:
+      valOut = (bool)duk_get_boolean(pimpl_->ctx, -1);
+      break;
+    case DUK_TYPE_STRING:
+      valOut = String(duk_get_string(pimpl_->ctx, -1));
+      break;
+    case DUK_TYPE_POINTER:
+      valOut = duk_get_pointer(pimpl_->ctx, -1);
+      break;
+    case DUK_TYPE_NUMBER:
+      // Convert numbers to the best-fitting type
+      dblVal = duk_get_number(pimpl_->ctx, -1);
+      // TODO: Care about fp precision too, or just the magnitude?
+      if (dblVal < FLT_MIN || dblVal > FLT_MAX) {
+        // Too big to fit any other type; use double
+        valOut = dblVal;
+        break;
+      }
+      fltVal = dblVal;
+      roundedVal = roundf(fltVal);
+      if (fltVal < INT64_MIN || fltVal > UINT64_MAX ||
+          fabsf(roundedVal - fltVal) > FLT_EPSILON) {
+        // Too big for an int or too fractional for a rounding error; use float
+        valOut = fltVal;
+        break;
+      }
+      if (roundedVal < 0.0f) {
+        // Signed int
+        if (roundedVal > INT8_MIN)
+          valOut = (Sint8)roundedVal;
+        else if (roundedVal > INT16_MIN)
+          valOut = (Sint16)roundedVal;
+        else if (roundedVal > INT32_MIN)
+          valOut = (Sint32)roundedVal;
+        else
+          valOut = (Sint64)roundedVal;
+        break;
+      }
+      // Unsigned int
+      if (roundedVal <= UINT8_MAX)
+        valOut = (Uint8)roundedVal;
+      else if (roundedVal <= UINT16_MAX)
+        valOut = (Uint16)roundedVal;
+      else if (roundedVal <= UINT32_MAX)
+        valOut = (Uint32)roundedVal;
+      else
+        valOut = (Uint64)roundedVal;
+      break;
+    default:
+      // TODO: Support DUK_TYPE_BUFFER or DUK_TYPE_LIGHTFUNC?
+      SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                  "Dictionary::getVariant: Unsupported value type %i", valType);
+      success = false;
+  }
+  duk_pop(pimpl_->ctx);
+  return success;
+}
+
 RENITY_API bool Dictionary::putArray(const char *key) {
   size_t depth = select(key, true, false);
   if (!depth) {
@@ -500,7 +585,7 @@ RENITY_API bool Dictionary::putObject(const char *key) {
 
 RENITY_API duk_context *Dictionary::getContext() { return pimpl_->ctx; }
 
-#define DICT_IMPL_BASE(T, dukExt, dukInt, printSpec, printAdd)                \
+#define DICT_IMPL(T, dukExt, dukInt, printSpec, valAdd, printAdd)             \
   template <>                                                                 \
   RENITY_API bool Dictionary::get<T>(const char *key, T *valOut) {            \
     size_t depth = select(key, false, true);                                  \
@@ -516,14 +601,14 @@ RENITY_API duk_context *Dictionary::getContext() { return pimpl_->ctx; }
       *valOut = (T)duk_get_##dukExt(pimpl_->ctx, -1);                         \
       SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,                            \
                      "Dictionary::get: '%s': " printSpec "\n", key,           \
-                     *valOut printAdd);                                       \
+                     (*valOut)##valAdd printAdd);                             \
     }                                                                         \
     unwind(depth);                                                            \
     return true;                                                              \
   }                                                                           \
                                                                               \
   template <>                                                                 \
-  RENITY_API bool Dictionary::getIndex<T>(Uint32 index, T * valOut) {         \
+  RENITY_API bool Dictionary::getAt<T>(Uint32 index, T * valOut) {            \
     size_t depth = selectIndex(index, false);                                 \
     if (!depth || !duk_is_##dukInt(pimpl_->ctx, -1)) {                        \
       SDL_LogDebug(                                                           \
@@ -537,7 +622,7 @@ RENITY_API duk_context *Dictionary::getContext() { return pimpl_->ctx; }
       *valOut = (T)duk_get_##dukExt(pimpl_->ctx, -1);                         \
       SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,                            \
                      "Dictionary::get: [%u]: " printSpec "\n", index,         \
-                     *valOut printAdd);                                       \
+                     (*valOut)##valAdd printAdd);                             \
     }                                                                         \
     unwind(depth);                                                            \
     return true;                                                              \
@@ -554,9 +639,9 @@ RENITY_API duk_context *Dictionary::getContext() { return pimpl_->ctx; }
     duk_uarridx_t index = (duk_uarridx_t)duk_get_length(pimpl_->ctx, -1);     \
     SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,                              \
                    "Dictionary::push: [%lu]=" printSpec "\n", index,          \
-                   val printAdd);                                             \
+                   val##valAdd printAdd);                                     \
     duk_require_stack(pimpl_->ctx, 1);                                        \
-    duk_push_##dukExt(pimpl_->ctx, val);                                      \
+    duk_push_##dukExt(pimpl_->ctx, val##valAdd);                              \
     return !!duk_put_prop_index(pimpl_->ctx, -2, index);                      \
   }                                                                           \
                                                                               \
@@ -579,7 +664,8 @@ RENITY_API duk_context *Dictionary::getContext() { return pimpl_->ctx; }
     if (valOut) {                                                             \
       *valOut = (T)duk_get_##dukExt(pimpl_->ctx, -1);                         \
       SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,                            \
-                     "Dictionary::pop: " printSpec "\n", *valOut printAdd);   \
+                     "Dictionary::pop: " printSpec "\n",                      \
+                     (*valOut)##valAdd printAdd);                             \
     }                                                                         \
     duk_pop(pimpl_->ctx);                                                     \
     duk_del_prop_index(pimpl_->ctx, -1, -1);                                  \
@@ -591,22 +677,22 @@ RENITY_API duk_context *Dictionary::getContext() { return pimpl_->ctx; }
     size_t depth = select(key, true, false);                                  \
     SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,                              \
                    "Dictionary::put: '%s' (%lu)=" printSpec "\n", key, depth, \
-                   val printAdd);                                             \
+                   val##valAdd printAdd);                                     \
     if (!depth) {                                                             \
       return false;                                                           \
     }                                                                         \
     duk_require_stack(pimpl_->ctx, 1);                                        \
-    duk_push_##dukExt(pimpl_->ctx, val);                                      \
+    duk_push_##dukExt(pimpl_->ctx, val##valAdd);                              \
     duk_bool_t success = duk_put_prop(pimpl_->ctx, -3);                       \
     unwind(depth - 1);                                                        \
     return !!success;                                                         \
   }                                                                           \
                                                                               \
   template <>                                                                 \
-  RENITY_API bool Dictionary::putIndex<T>(Uint32 index, T val) {              \
+  RENITY_API bool Dictionary::putAt<T>(Uint32 index, T val) {                 \
     SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,                              \
                    "Dictionary::put: [%u]=" printSpec "\n", index,            \
-                   val printAdd);                                             \
+                   val##valAdd printAdd);                                     \
     if (!duk_is_object(pimpl_->ctx, -1)) {                                    \
       SDL_LogError(                                                           \
           SDL_LOG_CATEGORY_APPLICATION,                                       \
@@ -614,23 +700,37 @@ RENITY_API duk_context *Dictionary::getContext() { return pimpl_->ctx; }
       return false;                                                           \
     }                                                                         \
     duk_require_stack(pimpl_->ctx, 1);                                        \
-    duk_push_##dukExt(pimpl_->ctx, val);                                      \
+    duk_push_##dukExt(pimpl_->ctx, val##valAdd);                              \
     return !!duk_put_prop_index(pimpl_->ctx, -2, index);                      \
   }
-#define DICT_IMPL(T, dukExt, dukInt, printSpec) \
-  DICT_IMPL_BASE(T, dukExt, dukInt, printSpec, )
 
 // Supported dictionary/duktape types
-DICT_IMPL_BASE(bool, boolean, boolean, "%s", ? "true" : "false")
-DICT_IMPL(const char *, string, string, "%s")
-DICT_IMPL(Uint8, uint, number, "%u")
-DICT_IMPL(Uint16, uint, number, "%u")
-DICT_IMPL(Uint32, uint, number, "%u")
-DICT_IMPL(Uint64, uint, number, "%u")
-DICT_IMPL(Sint8, int, number, "%i")
-DICT_IMPL(Sint16, int, number, "%i")
-DICT_IMPL(Sint32, int, number, "%i")
-DICT_IMPL(Sint64, int, number, "%li")
-DICT_IMPL(float, number, number, "%f")
-DICT_IMPL(double, number, number, "%f")
+DICT_IMPL(bool, boolean, boolean, "%s", , ? "true" : "false")
+DICT_IMPL(String, string, string, "%s", .c_str(), )
+DICT_IMPL(const char *, string, string, "%s", , )
+DICT_IMPL(void *, pointer, pointer, "0x%#08x", , )
+DICT_IMPL(Uint8, uint, number, "%u", , )
+DICT_IMPL(Uint16, uint, number, "%u", , )
+DICT_IMPL(Uint32, uint, number, "%u", , )
+DICT_IMPL(Uint64, uint, number, "%u", , )
+DICT_IMPL(Sint8, int, number, "%i", , )
+DICT_IMPL(Sint16, int, number, "%i", , )
+DICT_IMPL(Sint32, int, number, "%i", , )
+DICT_IMPL(Sint64, int, number, "%li", , )
+DICT_IMPL(float, number, number, "%f", , )
+DICT_IMPL(double, number, number, "%f", , )
+
+// Has to come after the specializations since it uses putAt
+RENITY_API bool Dictionary::putVariantAt(Uint32 index,
+                                         const PrimitiveVariant &val) {
+  Dictionary *visitorThis = this;
+  bool success;
+  std::visit(
+      [visitorThis, index, &success](auto &&arg) {
+        // using T = std::decay_t<decltype(arg)>;
+        success = visitorThis->putAt(index, arg);
+      },
+      val);
+  return success;
+}
 }  // namespace renity

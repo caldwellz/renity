@@ -88,14 +88,14 @@ RENITY_API bool ActionManager::post(Action action) {
   return true;
 }
 
-RENITY_API void ActionManager::subscribe(SharedPtr<ActionHandler> handler,
-                                         String actionCategory) {
+RENITY_API ActionCategoryId ActionManager::subscribe(
+    SharedPtr<ActionHandler> handler, String actionCategory) {
   if (!handler) {
     SDL_LogError(
         SDL_LOG_CATEGORY_APPLICATION,
         "ActionManager::subscribe: No handler given for actionCategory %s.",
         actionCategory.c_str());
-    return;
+    return 0;
   }
 
   const ActionCategoryId catId = getId(actionCategory);
@@ -106,6 +106,7 @@ RENITY_API void ActionManager::subscribe(SharedPtr<ActionHandler> handler,
       "ActionManager::subscribe: Subscribed new handler for category "
       "%s (0x%08x).",
       actionCategory.c_str(), catId);
+  return catId;
 }
 
 RENITY_API ActionId ActionManager::assignCategory(String actionName,

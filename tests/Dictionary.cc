@@ -33,9 +33,9 @@ int main(int argc, char *argv[]) {
   assert(config->push<const char *>("valB"));  // ["0"] -> object length==0
   assert(config->putArray("bar.woof.baz"));
   assert(config->select("bar.woof.baz") == 3);
-  assert(config->putIndex<const char *>(3, "ab"));  // [3] -> length==4
+  assert(config->putAt<const char *>(3, "ab"));  // [3] -> length==4
   assert(config->push<const char *>("cd"));         // [4] -> length==5
-  assert(config->putIndex<const char *>(0, "ef"));  // [0] -> length==5
+  assert(config->putAt<const char *>(0, "ef"));  // [0] -> length==5
   assert(config->push<const char *>("gh"));         // [5] -> length==6
   assert(config->selectIndex(7, true) == 1);        // [7] -> length==8
   assert(config->select("subA", true) == 1);
@@ -55,7 +55,7 @@ int main(int argc, char *argv[]) {
   SDL_Log("config.json[thing]: %u\n", config->keep<Uint16>("thing", 1));
   assert(config->select("bar.woof.baz") == 3);
   SDL_Log("config.json[bar.woof.baz.0]: %s\n",
-          config->keepIndex<const char *>(0, "arf"));
+          config->keepAt<const char *>(0, "arf"));
   assert(config->selectIndex(7, true) == 1);
   SDL_Log("config.json[bar.woof.baz.7.subA.foo]: %s\n",
           config->keep<const char *>("subA.foo", "arf"));
