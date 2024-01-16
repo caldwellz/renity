@@ -32,13 +32,15 @@ class RENITY_API ResourceManager {
    * Keeps it in a context-specific cache.
    * @param path Filename to read, in platform-independent notation,
    * or a name in <angle brackets> to generate a cached in-memory Resource.
+   * @param relativeTo A base path to prepend to the resource path.
+   * Ignored if an absolute filename path (beginning with '/') is given.
    * @return A Resource representing a file's data, or default data if there was
    * an error or a request to generate a temporary Resource.
    */
   template <typename T>
-  SharedPtr<T> get(const char *path) {
+  SharedPtr<T> get(const char *path, const char *relativeTo = nullptr) {
     requireBaseOf<Resource, T>();
-    SharedPtr<Resource> res = getOrCreate(path, &createResource<T>);
+    SharedPtr<Resource> res = getOrCreate(path, relativeTo, &createResource<T>);
     return dynamicPointerCast<T>(res);
   }
 
@@ -73,7 +75,8 @@ class RENITY_API ResourceManager {
     res->load(ops);
     return res;
   }
-  SharedPtr<Resource> getOrCreate(const char *path,
+
+  SharedPtr<Resource> getOrCreate(const char *path, const char *relativeTo,
                                   Resource *(*factory)(SDL_RWops *));
 
  private:

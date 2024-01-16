@@ -14,6 +14,7 @@
 
 #include "HashTable.h"
 #include "utils/physfsrwops.h"
+#include "utils/string_helpers.h"
 
 #ifdef RENITY_DEBUG
 #define DMON_IMPL
@@ -159,8 +160,20 @@ RENITY_API void ResourceManager::clear() {
 }
 
 RENITY_API SharedPtr<Resource> ResourceManager::getOrCreate(
-    const char *path, Resource *(*factory)(SDL_RWops *)) {
-  WeakRes &weak = pimpl_->map.get(path);
+    const char *path, const char *relativeTo,
+    Resource *(*factory)(SDL_RWops *)) {
+  // Construct absolute path
+  String absPath;
+  if (path) {
+    if (relativeTo && path[0] != '/') {
+      absPath += relativeTo;
+      if (!endsWith(absPath, "/")) absPath += '/';
+    }
+    absPath += path;
+  }
+
+  // Check map for an existing resource under the absolute path
+  WeakRes &weak = pimpl_->map.get(absPath);
   if (!weak.expired()) {
     SDL_LogVerbose(
         SDL_LOG_CATEGORY_APPLICATION,
@@ -169,23 +182,26 @@ RENITY_API SharedPtr<Resource> ResourceManager::getOrCreate(
     return weak.lock();
   }
 
+  // Resource not loaded; open the file, if valid
   SDL_RWops *ops = nullptr;
-  if (!path) {
+  if (!absPath.length()) {
     SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
                 "ResourceManager::getOrCreate: No path specified - creating "
                 "empty Resource.\n");
-  } else if (path[0] != '<') {  // internal, non-file resources use <names>
-    ops = PHYSFSRWOPS_openRead(path);
+  } else if (absPath[0] != '<') {  // internal, non-file resources use <names>
+    ops = PHYSFSRWOPS_openRead(absPath.c_str());
     SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION,
                    "ResourceManager::getOrCreate: CREATING ptr for '%s' (%s)\n",
-                   path, ops ? "valid" : "NOT valid");
+                   absPath.c_str(), ops ? "valid" : "NOT valid");
     if (!ops) {
       SDL_LogError(SDL_LOG_CATEGORY_SYSTEM,
                    "ResourceManager::getOrCreate: PHYSFSRWOPS_openRead(\"%s\") "
                    "failed: '%s'\n",
-                   path, SDL_GetError());
+                   absPath.c_str(), SDL_GetError());
     }
   }
+
+  // Get new basedir
   const StrongRes &strong = StrongRes(factory(ops));
   weak = strong;
   return strong;
