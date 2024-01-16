@@ -11,7 +11,6 @@
 #include "Sprite.h"
 
 #include <SDL3/SDL.h>
-#include <SDL3/SDL_main.h>
 #include <assert.h>
 #include <physfs.h>
 
@@ -119,11 +118,10 @@ int main(int argc, char *argv[]) {
   // Display test
   renity::Rect2Di destTop(41, 0, epicWidth, epicHeight);
   renity::Rect2Di destBottom(41, epicHeight + 2, epicWidth, epicHeight);
+  window.clearColor({0, 0, 255, SDL_ALPHA_OPAQUE});
   for (Uint8 i = 0; i < 30; ++i) {
     sprite.move();
     assert(sprite.draw());
-    SDL_SetRenderDrawColor(window.getRenderer(), 0, 0, 255,
-                           SDL_ALPHA_OPAQUE);  // Pure blue
     window.update();
     SDL_Delay(50);
   }

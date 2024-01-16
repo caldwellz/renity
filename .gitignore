@@ -5,6 +5,7 @@ docs/html
 
 # Local editor settings
 .vscode/settings.json
+imgui.ini
 
 # Meson subproject cache and build dirs
 subprojects/*
