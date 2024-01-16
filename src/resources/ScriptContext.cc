@@ -11,7 +11,6 @@
 
 #include <SDL3/SDL_log.h>
 
-#include "ActionHandler.h"
 #include "ActionManager.h"
 #include "Dictionary.h"
 #include "ResourceManager.h"
@@ -19,44 +18,7 @@
 #include "utils/id_helpers.h"
 
 namespace renity {
-struct ScriptActionHandler : public ActionHandler {
-  duk_context* ctx;
-  void handleAction(const ActionCategoryId categoryId, const Action* action) {
-    duk_idx_t origTop = duk_get_top(ctx);
-    duk_push_heap_stash(ctx);
-    if (!duk_get_prop_string(ctx, -1, "categoryHandlers") ||
-        !duk_get_prop_index(ctx, -1, categoryId) || !duk_is_function(ctx, -1)) {
-      SDL_LogError(
-          SDL_LOG_CATEGORY_APPLICATION,
-          "ScriptActionHandler::handleAction: JS categoryHandler is missing "
-          "for "
-          "ActionCategoryId 0x%#08x ('%s')",
-          categoryId,
-          ActionManager::getActive()->getNameFromId(categoryId).c_str());
-      duk_set_top(ctx, origTop);
-      return;
-    }
-
-    // Use the action name and an array of values as args for the actionHandler
-    duk_push_string(ctx, action->getName().c_str());
-    duk_push_bare_array(ctx);
-    Dictionary dictWrapper(ctx);
-    for (Uint32 dataIndex = 0; dataIndex < action->getDataCount();
-         ++dataIndex) {
-      dictWrapper.putVariantAt(dataIndex, action->getData(dataIndex));
-    }
-    if (duk_pcall(ctx, 2) != 0) {
-      SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                   "ScriptContext::handleAction: JS actionHandler failed for "
-                   "ActionId 0x%#08x ('%s') with '%s'",
-                   action->getId(), action->getName().c_str(),
-                   duk_safe_to_string(ctx, -1));
-    }
-    // Ignore the return value until request/response actions are implemented
-    duk_set_top(ctx, origTop);
-  }
-};
-
+ScriptContext* currentScriptContext = nullptr;
 /***** Auto-bound script helper functions *****/
 
 // Debug logger
@@ -198,12 +160,20 @@ static duk_ret_t scriptSubscribe(duk_context* ctx) {
     return 0;
   }
 
-  // Register the handler for this action
-  const char* catName = duk_get_string(ctx, 0);
-  ScriptActionHandler* handler = new ScriptActionHandler;
-  handler->ctx = ctx;
-  ActionCategoryId catId =
-      ActionManager::getActive()->subscribe(ActionHandlerPtr(handler), catName);
+  // TODO: Find a better way to not duplicate subscriptions on reload
+  if (currentScriptContext && !currentScriptContext->initialized()) {
+    // Register the handler for this action
+    const char* catName = duk_get_string(ctx, 0);
+    static ScriptContext* prevActiveContext = nullptr;
+    static ActionHandlerPtr handler;
+    if (prevActiveContext != currentScriptContext) {
+    }
+    // subscribe needs to deduplicate per category using pointer comparison
+    // TODO: ScriptContexts can also be DESTROYED on resource change; need
+    // UNsubscribe
+    ActionCategoryId catId =
+        ActionManager::getActive()->subscribe(handler, catName);
+  }
 
   // Store a callback function reference in the stash
   duk_push_heap_stash(ctx);
@@ -284,10 +254,14 @@ struct ScriptContext::Impl : public Dictionary {
 
 RENITY_API ScriptContext::ScriptContext() {
   pimpl_ = new Impl();
+  currentScriptContext = this;
   pimpl_->initialized = evalFile("/assets/scripts/init.js");
 }
 
-RENITY_API ScriptContext::~ScriptContext() { delete pimpl_; }
+RENITY_API ScriptContext::~ScriptContext() {
+  if (currentScriptContext == this) currentScriptContext = nullptr;
+  delete pimpl_;
+}
 /*
 // Error/debug logger helper for bound functions
 static void loggerHelper(duk_context* ctx, const char* func, const char* msg) {
@@ -336,5 +310,41 @@ RENITY_API void ScriptContext::load(SDL_RWops* src) {
   // Reset env and rerun init script to set things up on JS side
   pimpl_->setupGlobalEnv();
   pimpl_->initialized = evalFile("/assets/scripts/init.js");
+}
+
+RENITY_API void ScriptContext::handleAction(const ActionCategoryId categoryId,
+                                            const Action* action) {
+  duk_idx_t origTop = duk_get_top(pimpl_->ctx);
+  duk_push_heap_stash(pimpl_->ctx);
+  if (!duk_get_prop_string(pimpl_->ctx, -1, "categoryHandlers") ||
+      !duk_get_prop_index(pimpl_->ctx, -1, categoryId) ||
+      !duk_is_function(pimpl_->ctx, -1)) {
+    SDL_LogError(
+        SDL_LOG_CATEGORY_APPLICATION,
+        "ScriptActionHandler::handleAction: JS categoryHandler is missing "
+        "for "
+        "ActionCategoryId 0x%#08x ('%s')",
+        categoryId,
+        ActionManager::getActive()->getNameFromId(categoryId).c_str());
+    duk_set_top(pimpl_->ctx, origTop);
+    return;
+  }
+
+  // Use the action name and an array of values as args for the actionHandler
+  duk_push_string(pimpl_->ctx, action->getName().c_str());
+  duk_push_bare_array(pimpl_->ctx);
+  Dictionary dictWrapper(pimpl_->ctx);
+  for (Uint32 dataIndex = 0; dataIndex < action->getDataCount(); ++dataIndex) {
+    dictWrapper.putVariantAt(dataIndex, action->getData(dataIndex));
+  }
+  if (duk_pcall(pimpl_->ctx, 2) != 0) {
+    SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                 "ScriptContext::handleAction: JS actionHandler failed for "
+                 "ActionId 0x%#08x ('%s') with '%s'",
+                 action->getId(), action->getName().c_str(),
+                 duk_safe_to_string(pimpl_->ctx, -1));
+  }
+  // Ignore the return value until request/response actions are implemented
+  duk_set_top(pimpl_->ctx, origTop);
 }
 }  // namespace renity

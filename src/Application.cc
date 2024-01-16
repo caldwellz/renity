@@ -267,6 +267,7 @@ RENITY_API bool Application::initialize(bool headless) {
 }
 
 RENITY_API int Application::run() {
+  pimpl_->scriptContext->load(nullptr);
   SDL_Event event;
   bool keepGoing = true, show_demo_window = false, vsync = true,
        vsyncLast = true, wireframe = false;

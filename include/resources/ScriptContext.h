@@ -10,11 +10,12 @@
 #pragma once
 
 #include "3rdparty/duktape/duktape.h"
+#include "ActionHandler.h"
 #include "Resource.h"
 #include "types.h"
 
 namespace renity {
-class RENITY_API ScriptContext : public Resource {
+class RENITY_API ScriptContext : public Resource, public ActionHandler {
  public:
   ScriptContext();
   ~ScriptContext();
@@ -36,9 +37,8 @@ class RENITY_API ScriptContext : public Resource {
    */
   void registerFunc(String path, duk_c_function func, duk_idx_t nargs);
 
- protected:
-  friend class ResourceManager;
   void load(SDL_RWops* src);
+  void handleAction(const ActionCategoryId categoryId, const Action* action);
 
  private:
   struct Impl;

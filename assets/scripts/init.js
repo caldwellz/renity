@@ -6,6 +6,7 @@ function init() {
   Actions.assignCategory('ExampleAction', 'ScriptCategory');
   Actions.assignCategory('ExampleAction2', 'ScriptCategory');
   Actions.subscribe('ScriptCategory', lib.handleExampleActionCategory);
+  Actions.subscribe('Window', lib.handleExampleActionCategory);
   Actions.post('ExampleAction', ['foo', 2, -65536]);
   Actions.post(Helpers.getId('ExampleAction2'), [6.66, true, null]);
 
