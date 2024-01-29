@@ -4,7 +4,7 @@
 		{
 			"type": "cppbuild",
 			"label": "C/C++: cl.exe build active file",
-			"command": "cl.exe",
+			"command": "clang-cl.exe",
 			"args": [
 				"/Zi",
 				"/EHsc",
@@ -22,7 +22,7 @@
 				"kind": "build",
 				"isDefault": true
 			},
-			"detail": "compiler: cl.exe"
+			"detail": "compiler: clang-cl.exe"
 		}
 	]
 }

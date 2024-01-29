@@ -37,8 +37,8 @@
                 "_UNICODE"
             ],
             "windowsSdkVersion": "10.0.19041.0",
-            "compilerPath": "C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.31.31103/bin/Hostx64/x64/clang-cl.exe",
-            "intelliSenseMode": "windows-msvc-x64",
+            "compilerPath": "C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/Llvm/bin/clang-cl.exe",
+            "intelliSenseMode": "windows-clang-x64",
             "cppStandard": "c++17",
             "cStandard": "c11"
         }
